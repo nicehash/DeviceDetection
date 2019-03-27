@@ -56,7 +56,12 @@ void WriteValue(std::stringstream &ss, std::vector<T> vec) {
 
 template <>
 void WriteValue<bool>(std::stringstream &ss, bool value) {
-	ss << value ? "true" : "false";
+	if (value) {
+		ss << "true";
+	}
+	else {
+		ss << "false";
+	}
 }
 
 template <>
