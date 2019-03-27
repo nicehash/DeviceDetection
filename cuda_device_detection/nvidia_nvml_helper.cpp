@@ -35,20 +35,20 @@ do {														\
 
 #define NVML_DEVICE_UUID_BUFFER_SIZE 80
 
-void nvidia_nvml_helper::SafeNVMLInit() {
+bool nvidia_nvml_helper::SafeNVMLInit() {
 #if USE_DYNAMIC_LIB_LOAD
 	char path_buffer[MAX_PATH];
 	DWORD ret = GetEnvironmentVariableA("ProgramFiles", path_buffer, MAX_PATH - 36);
 	if (ret == 0 || ret >= (MAX_PATH - 36))
 	{
 		// error getting program files path
-		return;
+		return false;
 	}
 
 	strcat(path_buffer, "\\NVIDIA Corporation\\NVSMI\\nvml.dll");
 
 	HMODULE hmod = LoadLibraryA(path_buffer);
-	if (hmod == NULL) return;
+	if (hmod == NULL) return false;
 
 	NVMLInit = (nvml_Init)GetProcAddress(hmod, "nvmlInit_v2");
 	NVMLShutdown = (nvml_Shutdown)GetProcAddress(hmod, "nvmlShutdown");
@@ -58,9 +58,14 @@ void nvidia_nvml_helper::SafeNVMLInit() {
 	NVMLDeviceGetDisplayActive = (nvml_DeviceGetDisplayActive)GetProcAddress(hmod, "nvmlDeviceGetDisplayActive");
 	NVMLSystemGetDriverVersion = (nvml_SystemGetDriverVersion)GetProcAddress(hmod, "nvmlSystemGetDriverVersion");
 
-	if (NVMLInit) NVMLInit();
+	int initStatus = -1;
+	if (NVMLInit) {
+		initStatus = NVMLInit();
+	}
+	return NVML_SUCCESS == initStatus;
 #else
 	NVML_SAFE_CALL(nvmlInit());
+	return true;
 #endif
 }
 
@@ -110,7 +115,12 @@ void nvidia_nvml_helper::SetCudaDeviceAttributes(const char *pciBusID, CudaDevic
 std::string nvidia_nvml_helper::GetDriverVersionSafe() {
 	char buffer[81];
 #if USE_DYNAMIC_LIB_LOAD
-	NVMLSystemGetDriverVersion(buffer, sizeof(buffer));
+	if (NVMLSystemGetDriverVersion) {
+		NVMLSystemGetDriverVersion(buffer, sizeof(buffer));
+	}
+	else {
+		return "";
+	}
 #else
 	NVML_SAFE_CALL(nvmlSystemGetDriverVersion(buffer, sizeof(buffer)));
 #endif

@@ -18,7 +18,7 @@ bool CudaDetection::QueryDevices() {
 	try {
 		int device_count;
 		CUDA_SAFE_CALL(cudaGetDeviceCount(&device_count));
-		nvidia_nvml_helper::SafeNVMLInit(); // NVML_SAFE_CALL(nvmlInit());
+		_isNvmlInitialized = nvidia_nvml_helper::SafeNVMLInit(); // NVML_SAFE_CALL(nvmlInit());
 		for (int i = 0; i < device_count; ++i) {
 			CudaDevice cudaDevice;
 
@@ -59,7 +59,7 @@ bool CudaDetection::QueryDevices() {
 
 
 string CudaDetection::GetDevicesJsonString(bool prettyPrint) {
-	return json_helpers::GetCUDADevicesJsonString(_cudaDevices, _driverVersionStr, _errorString, prettyPrint); 
+	return json_helpers::GetCUDADevicesJsonString(_cudaDevices, _driverVersionStr, _errorString, _isNvmlInitialized, prettyPrint);
 }
 
 string CudaDetection::GetErrorString() {
