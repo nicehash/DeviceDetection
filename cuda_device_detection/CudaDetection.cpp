@@ -18,7 +18,7 @@ bool CudaDetection::QueryDevices() {
 	try {
 		int device_count;
 		CUDA_SAFE_CALL(cudaGetDeviceCount(&device_count));
-		_isNvmlInitialized = nvidia_nvml_helper::SafeNVMLInit(); // NVML_SAFE_CALL(nvmlInit());
+		_isNvmlInitialized = nvidia_nvml_helper::SafeNVMLInit();
 		for (int i = 0; i < device_count; ++i) {
 			CudaDevice cudaDevice;
 
@@ -27,27 +27,22 @@ bool CudaDetection::QueryDevices() {
 			char pciBusID[PCI_BUS_LEN];
 			CUDA_SAFE_CALL(cudaDeviceGetPCIBusId(pciBusID, PCI_BUS_LEN, i));
 
-			// init serial vendor stuff
-			nvidia_nvml_helper::SetCudaDeviceAttributes(pciBusID, cudaDevice);
-
-			// init device info
+			// init device CUDA info
 			cudaDevice.DeviceID = i;
 			cudaDevice.pciBusID = props.pciBusID;
-			//cudaDevice.VendorName = getVendorString(pciInfo);
 			cudaDevice.DeviceName = props.name;
 			cudaDevice.SM_major = props.major;
 			cudaDevice.SM_minor = props.minor;
-			//cudaDevice.UUID = uuid;
 			cudaDevice.DeviceGlobalMemory = props.totalGlobalMem;
-			//cudaDevice.pciDeviceId = pciInfo.pciDeviceId;
-			//cudaDevice.pciSubSystemId = pciInfo.pciSubSystemId;
 			cudaDevice.SMX = props.multiProcessorCount;
-			//cudaDevice.VendorID = getVendorId(pciInfo);
+
+			// init NVML info [UUID, VendorName, pciDeviceId, pciSubSystemId, VendorID, HasMonitorConnected]
+			nvidia_nvml_helper::SetCudaDeviceAttributes(pciBusID, cudaDevice);
 
 			_cudaDevices.push_back(cudaDevice);
 		}
 		_driverVersionStr = nvidia_nvml_helper::GetDriverVersionSafe();
-		nvidia_nvml_helper::SafeNVMLShutdown(); // NVML_SAFE_CALL(nvmlShutdown());
+		nvidia_nvml_helper::SafeNVMLShutdown();
 	}
 	catch (runtime_error &err) {
 		_errorString = err.what();
