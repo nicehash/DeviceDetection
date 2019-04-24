@@ -27,15 +27,16 @@ namespace amd_json {
 		return retArr;
 	}
 
-    json getJsonPlatform(const JsonLog& p) {
+    json getJsonPlatform(const OpenCLPlatform& p) {
         return json {
-        	{ "PlatformName", p.PlatformName },
+			{ "PlatformVendor", p.PlatformVendor },
+			{ "PlatformName", p.PlatformName },
 			{ "PlatformNum", p.PlatformNum },
 			{ "Devices", getJsonDevicesArray(p.Devices) }
         };
     }
 
-    json conver_to_json(const std::vector<JsonLog>& ps, std::string statusStr, std::string errorStr) {
+    json conver_to_json(const std::vector<OpenCLPlatform>& ps, std::string statusStr, std::string errorStr) {
     	json platformsJson = json::array();
 		for (const auto &p : ps) {
 			platformsJson.push_back(getJsonPlatform(p));
@@ -48,7 +49,7 @@ namespace amd_json {
     }
 }
 
-std::string json_helpers::GetPlatformDevicesJsonString(std::vector<JsonLog> &platforms, std::string statusStr, std::string errorStr, bool prettyPrint) {
+std::string json_helpers::GetPlatformDevicesJsonString(std::vector<OpenCLPlatform> &platforms, std::string statusStr, std::string errorStr, bool prettyPrint) {
 	const auto j = amd_json::conver_to_json(platforms, statusStr, errorStr);
 	if (prettyPrint) {
 		return j.dump(4);
@@ -76,15 +77,16 @@ void WriteValue<OpenCLDevice>(std::stringstream &ss, OpenCLDevice dev) {
 }
 
 template <>
-void WriteValue<JsonLog>(std::stringstream &ss, JsonLog p) {
+void WriteValue<OpenCLPlatform>(std::stringstream &ss, OpenCLPlatform p) {
 	StartObject(ss);
 	AddJSONPropertyAndValue(ss, "PlatformNum", p.PlatformNum);
+	AddJSONPropertyAndValue(ss, "PlatformVendor", p.PlatformVendor);
 	AddJSONPropertyAndValue(ss, "PlatformName", p.PlatformName);
 	AddJSONPropertyAndValue(ss, "Devices", p.Devices, false); // FALSE DO NOT TERMINATE WITH COMMA
 	EndObject(ss);
 }
 
-std::string json_helpers::GetPlatformDevicesJsonString(std::vector<JsonLog> &platforms, std::string statusStr, std::string errorStr, bool prettyPrint) {
+std::string json_helpers::GetPlatformDevicesJsonString(std::vector<OpenCLPlatform> &platforms, std::string statusStr, std::string errorStr, bool prettyPrint) {
 	std::stringstream ss;
 	StartObject(ss);
 	AddJSONPropertyAndValue(ss, "Platforms", platforms);

@@ -17,7 +17,8 @@ struct OpenCLDevice {
 };
 
 // rename this to platform
-struct JsonLog {
+struct OpenCLPlatform {
+	std::string PlatformVendor;
 	std::string PlatformName;
 	int PlatformNum;
 	std::vector<OpenCLDevice> Devices;
