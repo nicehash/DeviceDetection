@@ -67,10 +67,10 @@
       <AdditionalLibraryDirectories>$(AMDAPPSDKROOT)\lib\x86_64\</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
-      <Command>copy /Y "$(AMDAPPSDKROOT)\bin\x86_64\OpenCL.dll" "$(SolutionDir)$(Configuration)\OpenCL.dll"
+      <Command>copy /Y "$(AMDAPPSDKROOT)\bin\x86_64\OpenCL.dll" "$(SolutionDir)\x64\$(Configuration)\OpenCL.dll"
 REM the path is absolute maybe fix
-copy /Y "C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\redist\x64\Microsoft.VC120.CRT\msvcp120.dll" "$(SolutionDir)$(Configuration)\msvcp120.dll"
-copy /Y "C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\redist\x64\Microsoft.VC120.CRT\msvcr120.dll" "$(SolutionDir)$(Configuration)\msvcr120.dll"</Command>
+copy /Y "C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\redist\x64\Microsoft.VC120.CRT\msvcp120.dll" "$(SolutionDir)\x64\$(Configuration)\msvcp120.dll"
+copy /Y "C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\redist\x64\Microsoft.VC120.CRT\msvcr120.dll" "$(SolutionDir)\x64\$(Configuration)\msvcr120.dll"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -94,10 +94,10 @@ copy /Y "C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\redist\x64\Micro
       <AdditionalDependencies>OpenCL.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>copy /Y "$(AMDAPPSDKROOT)\bin\x86_64\OpenCL.dll" "$(SolutionDir)$(Configuration)\OpenCL.dll"
+      <Command>copy /Y "$(AMDAPPSDKROOT)\bin\x86_64\OpenCL.dll" "$(SolutionDir)\x64\$(Configuration)\OpenCL.dll"
 REM the path is absolute maybe fix
-copy /Y "C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\redist\x64\Microsoft.VC120.CRT\msvcp120.dll" "$(SolutionDir)$(Configuration)\msvcp120.dll"
-copy /Y "C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\redist\x64\Microsoft.VC120.CRT\msvcr120.dll" "$(SolutionDir)$(Configuration)\msvcr120.dll"</Command>
+copy /Y "C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\redist\x64\Microsoft.VC120.CRT\msvcp120.dll" "$(SolutionDir)\x64\$(Configuration)\msvcp120.dll"
+copy /Y "C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\redist\x64\Microsoft.VC120.CRT\msvcr120.dll" "$(SolutionDir)\x64\$(Configuration)\msvcr120.dll"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
