@@ -291,3 +291,6 @@ shared/json.hpp
 *.db
 *.opendb
 .vscode
+# 3rdPartyLibs
+!3rdPartyLibs/AMD_OpenCL/OpenCL.dll
+!3rdPartyLibs/NVIDIA/nvml.dll
