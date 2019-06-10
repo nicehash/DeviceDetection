@@ -6,6 +6,6 @@
 
 namespace json_helpers
 {
-	std::string GetCUDADevicesJsonString(std::vector<CudaDevice> &cudaDevices, std::string driverVersion, std::string errorString, bool nvmlLoaded, bool prettyPrint = false);
+	std::string GetCUDADevicesJsonString(std::vector<CudaDevice> &cudaDevices, std::string driverVersion, std::string errorString, bool nvmlLoaded, bool nvmlLoadedFallback, bool prettyPrint = false);
 }
 

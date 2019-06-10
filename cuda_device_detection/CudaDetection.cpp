@@ -14,11 +14,14 @@ CudaDetection::~CudaDetection() { }
 
 #define PCI_BUS_LEN 64
 
-bool CudaDetection::QueryDevices() {
+bool CudaDetection::QueryDevices(bool useNvmlFallback) {
 	try {
 		int device_count;
 		CUDA_SAFE_CALL(cudaGetDeviceCount(&device_count));
 		_isNvmlInitialized = nvidia_nvml_helper::SafeNVMLInit();
+		if (!_isNvmlInitialized && useNvmlFallback) {
+			_isNvmlInitializedFallback = nvidia_nvml_helper::SafeNVMLInitFallback();
+		}
 		for (int i = 0; i < device_count; ++i) {
 			CudaDevice cudaDevice;
 
@@ -54,7 +57,7 @@ bool CudaDetection::QueryDevices() {
 
 
 string CudaDetection::GetDevicesJsonString(bool prettyPrint) {
-	return json_helpers::GetCUDADevicesJsonString(_cudaDevices, _driverVersionStr, _errorString, _isNvmlInitialized, prettyPrint);
+	return json_helpers::GetCUDADevicesJsonString(_cudaDevices, _driverVersionStr, _errorString, _isNvmlInitialized, _isNvmlInitializedFallback, prettyPrint);
 }
 
 string CudaDetection::GetErrorString() {

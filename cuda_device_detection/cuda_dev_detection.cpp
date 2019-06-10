@@ -5,11 +5,11 @@
 extern "C" {
 #endif
 
-char* _GetCUDADevices(bool prettyString)
+char* _GetCUDADevices(bool prettyString, bool useNvmlFallback)
 {
     static std::string ret;
     CudaDetection detection;
-    if (detection.QueryDevices()) {
+    if (detection.QueryDevices(useNvmlFallback)) {
         ret = detection.GetDevicesJsonString(prettyString);
     }
     else {

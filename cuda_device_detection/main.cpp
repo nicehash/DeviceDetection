@@ -3,7 +3,8 @@
 
 int main(int argc, char* argv[]) {
 	const auto prettyPrint = argc >= 2; 
-	std::cout << _GetCUDADevices(prettyPrint);
+	const auto nvmlFallback = argc >= 3;
+	std::cout << _GetCUDADevices(prettyPrint, nvmlFallback);
 	return 0;
 }
 
