@@ -14,7 +14,7 @@ namespace amd_json {
 		for (const auto &dev : devs) {
 			retArr.push_back({
 				{ "DeviceID", dev.DeviceID },
-				{ "AMD_BUS_ID", dev.AMD_BUS_ID },
+				{ "BUS_ID", dev.BUS_ID },
 				{ "_CL_DEVICE_NAME", dev._CL_DEVICE_NAME },
 				{ "_CL_DEVICE_TYPE", dev._CL_DEVICE_TYPE },
 				{ "_CL_DEVICE_GLOBAL_MEM_SIZE", dev._CL_DEVICE_GLOBAL_MEM_SIZE },
@@ -65,7 +65,7 @@ template <>
 void WriteValue<OpenCLDevice>(std::stringstream &ss, OpenCLDevice dev) {
 	StartObject(ss);
 	AddJSONPropertyAndValue(ss, "DeviceID", dev.DeviceID);
-	AddJSONPropertyAndValue(ss, "AMD_BUS_ID", dev.AMD_BUS_ID);
+	AddJSONPropertyAndValue(ss, "BUS_ID", dev.BUS_ID);
 	AddJSONPropertyAndValue(ss, "_CL_DEVICE_NAME", dev._CL_DEVICE_NAME);
 	AddJSONPropertyAndValue(ss, "_CL_DEVICE_TYPE", dev._CL_DEVICE_TYPE);
 	AddJSONPropertyAndValue(ss, "_CL_DEVICE_GLOBAL_MEM_SIZE", dev._CL_DEVICE_GLOBAL_MEM_SIZE);

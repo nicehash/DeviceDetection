@@ -4,7 +4,7 @@
 #define CL_USE_DEPRECATED_OPENCL_2_0_APIS
 //#define CL_VERSION_1_2
 #define CL_USE_DEPRECATED_OPENCL_1_1_APIS
-#include "cl_ext.hpp"
+#include "CL/cl_ext.h"
 
 #include "OpenCLDevice.h"
 
@@ -18,13 +18,10 @@ public:
 	std::string GetErrorString();
 
 private:
-	static std::vector<cl::Device> getDevices(std::vector<cl::Platform> const& _platforms, unsigned _platformId);
-	static std::vector<cl::Platform> getPlatforms();
-
 	std::vector<OpenCLPlatform> _devicesPlatformsDevices;
 
 	std::string _errorString = "";
 	std::string _statusString = "OK"; // assume ok
 
-	static std::string StringnNullTerminatorFix(const std::string& str);
+	void AppendToErrorString(cl_int ret);
 };
