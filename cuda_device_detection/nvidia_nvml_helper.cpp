@@ -33,8 +33,6 @@ do {														\
 } while (0)
 #endif
 
-#define NVML_DEVICE_UUID_BUFFER_SIZE 80
-
 bool nvidia_nvml_helper::SafeNVMLInit() {
 #if USE_DYNAMIC_LIB_LOAD
 	char path_buffer[MAX_PATH];
@@ -147,10 +145,10 @@ void nvidia_nvml_helper::SetCudaDeviceAttributes(const char *pciBusID, CudaDevic
 }
 
 std::string nvidia_nvml_helper::GetDriverVersionSafe() {
-	char buffer[81];
+	char buffer[NVML_SYSTEM_DRIVER_VERSION_BUFFER_SIZE];
 #if USE_DYNAMIC_LIB_LOAD
 	if (NVMLSystemGetDriverVersion) {
-		NVMLSystemGetDriverVersion(buffer, sizeof(buffer));
+		NVMLSystemGetDriverVersion(buffer, NVML_SYSTEM_DRIVER_VERSION_BUFFER_SIZE);
 	}
 	else {
 		return "";
