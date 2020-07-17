@@ -21,6 +21,6 @@ private:
 	std::vector<CudaDevice> _cudaDevices;
 	// driver version
 	std::string _driverVersionStr = "";
-	bool _isNvmlInitialized = false;
+	int _isNvmlInitialized = 0;
 };
 

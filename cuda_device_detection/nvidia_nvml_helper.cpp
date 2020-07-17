@@ -42,12 +42,16 @@ HMODULE load_module(const char* env_var_name, const char* sub_path) {
 	return LoadLibraryA(path.c_str());
 }
 
-bool nvidia_nvml_helper::SafeNVMLInit() {
+int nvidia_nvml_helper::SafeNVMLInit() {
 #if USE_DYNAMIC_LIB_LOAD
 	// check standard driver install and fallback to DCH
+	int retValue = 0;
 	HMODULE hmod = load_module("ProgramFiles", "\\NVIDIA Corporation\\NVSMI\\nvml.dll");
-	if (hmod == NULL) hmod = load_module("windir", "\\System32\\nvml.dll");
-	if (hmod == NULL) return false;
+	if (hmod == NULL) {
+		hmod = load_module("windir", "\\System32\\nvml.dll");
+		retValue = 1;
+	}
+	if (hmod == NULL) return -1;
 
 	NVMLInit = (nvml_Init)GetProcAddress(hmod, "nvmlInit_v2");
 	NVMLShutdown = (nvml_Shutdown)GetProcAddress(hmod, "nvmlShutdown");
@@ -60,11 +64,12 @@ bool nvidia_nvml_helper::SafeNVMLInit() {
 	int initStatus = -1;
 	if (NVMLInit) {
 		initStatus = NVMLInit();
+		if (initStatus != NVML_SUCCESS) return -1;
 	}
-	return NVML_SUCCESS == initStatus;
+	return retValue;
 #else
 	NVML_SAFE_CALL(nvmlInit());
-	return true;
+	return 0;
 #endif
 }
 

@@ -25,7 +25,7 @@ json cuda_dev_conver_to_json(const CudaDevice& d) {
 	};
 }
 
-std::string json_helpers::GetCUDADevicesJsonString(std::vector<CudaDevice> &cudaDevices, std::string driverVersion, std::string errorString, bool nvmlLoaded, bool prettyPrint) {
+std::string json_helpers::GetCUDADevicesJsonString(std::vector<CudaDevice> &cudaDevices, std::string driverVersion, std::string errorString, int nvmlLoaded, bool prettyPrint) {
 	json j = {
 		{ "NvmlLoaded", nvmlLoaded },
 		{ "DriverVersion", driverVersion },
@@ -64,7 +64,7 @@ void WriteValue<CudaDevice>(std::stringstream &ss, CudaDevice d) {
 	EndObject(ss);
 }
 
-std::string json_helpers::GetCUDADevicesJsonString(std::vector<CudaDevice> &cudaDevices, std::string driverVersion, std::string errorString, bool nvmlLoaded, bool prettyPrint) {
+std::string json_helpers::GetCUDADevicesJsonString(std::vector<CudaDevice> &cudaDevices, std::string driverVersion, std::string errorString, int nvmlLoaded, bool prettyPrint) {
 	std::stringstream ss;
 	
 	StartObject(ss);
