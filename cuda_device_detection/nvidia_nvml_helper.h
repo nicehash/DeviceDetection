@@ -18,8 +18,7 @@ class nvidia_nvml_helper
 private:
 	nvidia_nvml_helper(); // no instances
 public:
-	static bool SafeNVMLInit();
-	static bool SafeNVMLInitFallback();
+	static int SafeNVMLInit();
 	// set UUID, VendorID and VendorName
 	static void SetCudaDeviceAttributes(const char *pciBusID, CudaDevice &cudaDevice);
 	static void SafeNVMLShutdown();

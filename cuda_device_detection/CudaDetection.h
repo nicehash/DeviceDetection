@@ -10,7 +10,7 @@ public:
 	CudaDetection();
 	~CudaDetection();
 
-	bool QueryDevices(bool useNvmlFallback);
+	bool QueryDevices();
 	std::string GetDevicesJsonString(bool prettyPrint = false);
 	std::string GetErrorString();
 	std::string GetDriverVersion();
@@ -21,7 +21,6 @@ private:
 	std::vector<CudaDevice> _cudaDevices;
 	// driver version
 	std::string _driverVersionStr = "";
-	bool _isNvmlInitialized = false;
-	bool _isNvmlInitializedFallback = false;
+	int _isNvmlInitialized = 0;
 };
 

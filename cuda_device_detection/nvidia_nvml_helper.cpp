@@ -2,6 +2,7 @@
 
 #if USE_DYNAMIC_LIB_LOAD
 #include <windows.h>
+#include <iostream>
 
 typedef int(*nvml_Init)(void);
 typedef int(*nvml_Shutdown)(void);
@@ -33,54 +34,24 @@ do {														\
 } while (0)
 #endif
 
-bool nvidia_nvml_helper::SafeNVMLInit() {
-#if USE_DYNAMIC_LIB_LOAD
+HMODULE load_module(const char* env_var_name, const char* sub_path) {
 	char path_buffer[MAX_PATH];
-	DWORD ret = GetEnvironmentVariableA("ProgramFiles", path_buffer, MAX_PATH - 36);
-	if (ret == 0 || ret >= (MAX_PATH - 36))
-	{
-		// error getting program files path
-		return false;
-	}
-
-	strcat(path_buffer, "\\NVIDIA Corporation\\NVSMI\\nvml.dll");
-
-	HMODULE hmod = LoadLibraryA(path_buffer);
-	if (hmod == NULL) return false;
-
-	NVMLInit = (nvml_Init)GetProcAddress(hmod, "nvmlInit_v2");
-	NVMLShutdown = (nvml_Shutdown)GetProcAddress(hmod, "nvmlShutdown");
-	NVMLDeviceGetHandleByPciBusId = (nvml_DeviceGetHandleByPciBusId)GetProcAddress(hmod, "nvmlDeviceGetHandleByPciBusId_v2");
-	NVMLDeviceGetUUID = (nvml_DeviceGetUUID)GetProcAddress(hmod, "nvmlDeviceGetUUID");
-	NVMLDeviceGetPciInfo = (nvml_DeviceGetPciInfo)GetProcAddress(hmod, "nvmlDeviceGetPciInfo_v2");
-	NVMLDeviceGetDisplayActive = (nvml_DeviceGetDisplayActive)GetProcAddress(hmod, "nvmlDeviceGetDisplayActive");
-	NVMLSystemGetDriverVersion = (nvml_SystemGetDriverVersion)GetProcAddress(hmod, "nvmlSystemGetDriverVersion");
-
-	int initStatus = -1;
-	if (NVMLInit) {
-		initStatus = NVMLInit();
-	}
-	return NVML_SUCCESS == initStatus;
-#else
-	NVML_SAFE_CALL(nvmlInit());
-	return true;
-#endif
+	DWORD ret = GetEnvironmentVariableA(env_var_name, path_buffer, MAX_PATH);
+	if (ret == 0) return 0;
+	std::string path = std::string(path_buffer) + sub_path;
+	return LoadLibraryA(path.c_str());
 }
 
-bool nvidia_nvml_helper::SafeNVMLInitFallback() {
+int nvidia_nvml_helper::SafeNVMLInit() {
 #if USE_DYNAMIC_LIB_LOAD
-	char path_buffer[MAX_PATH];
-	DWORD ret = GetCurrentDirectoryA(MAX_PATH, path_buffer);
-	if (ret == 0 || ret >= (MAX_PATH - 36))
-	{
-		// error getting program files path
-		return false;
+	// check standard driver install and fallback to DCH
+	int retValue = 0;
+	HMODULE hmod = load_module("ProgramFiles", "\\NVIDIA Corporation\\NVSMI\\nvml.dll");
+	if (hmod == NULL) {
+		hmod = load_module("windir", "\\System32\\nvml.dll");
+		retValue = 1;
 	}
-
-	strcat(path_buffer, "\\NVIDIA\\nvml.dll");
-
-	HMODULE hmod = LoadLibraryA(path_buffer);
-	if (hmod == NULL) return false;
+	if (hmod == NULL) return -1;
 
 	NVMLInit = (nvml_Init)GetProcAddress(hmod, "nvmlInit_v2");
 	NVMLShutdown = (nvml_Shutdown)GetProcAddress(hmod, "nvmlShutdown");
@@ -93,11 +64,12 @@ bool nvidia_nvml_helper::SafeNVMLInitFallback() {
 	int initStatus = -1;
 	if (NVMLInit) {
 		initStatus = NVMLInit();
+		if (initStatus != NVML_SUCCESS) return -1;
 	}
-	return NVML_SUCCESS == initStatus;
+	return retValue;
 #else
 	NVML_SAFE_CALL(nvmlInit());
-	return true;
+	return 0;
 #endif
 }
 
