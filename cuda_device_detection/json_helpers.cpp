@@ -25,10 +25,9 @@ json cuda_dev_conver_to_json(const CudaDevice& d) {
 	};
 }
 
-std::string json_helpers::GetCUDADevicesJsonString(std::vector<CudaDevice> &cudaDevices, std::string driverVersion, std::string errorString, bool nvmlLoaded, bool nvmlLoadedFallback, bool prettyPrint) {
+std::string json_helpers::GetCUDADevicesJsonString(std::vector<CudaDevice> &cudaDevices, std::string driverVersion, std::string errorString, bool nvmlLoaded, bool prettyPrint) {
 	json j = {
 		{ "NvmlLoaded", nvmlLoaded },
-		{ "NvmlLoadedFallback", nvmlLoadedFallback },
 		{ "DriverVersion", driverVersion },
 		{ "CudaDevices", json::array() },
 		{ "ErrorString", errorString },
@@ -65,12 +64,11 @@ void WriteValue<CudaDevice>(std::stringstream &ss, CudaDevice d) {
 	EndObject(ss);
 }
 
-std::string json_helpers::GetCUDADevicesJsonString(std::vector<CudaDevice> &cudaDevices, std::string driverVersion, std::string errorString, bool nvmlLoaded, bool nvmlLoadedFallback, bool prettyPrint) {
+std::string json_helpers::GetCUDADevicesJsonString(std::vector<CudaDevice> &cudaDevices, std::string driverVersion, std::string errorString, bool nvmlLoaded, bool prettyPrint) {
 	std::stringstream ss;
 	
 	StartObject(ss);
 	AddJSONPropertyAndValue(ss, "NvmlLoaded", nvmlLoaded);
-	AddJSONPropertyAndValue(ss, "NvmlLoadedFallback", nvmlLoadedFallback);
 	AddJSONPropertyAndValue(ss, "CudaDevices", cudaDevices);
 	AddJSONPropertyAndValue(ss, "DriverVersion", driverVersion);
 	AddJSONPropertyAndValue(ss, "ErrorString", errorString, false); // FALSE DO NOT TERMINATE WITH COMMA

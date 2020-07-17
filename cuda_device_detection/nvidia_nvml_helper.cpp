@@ -68,31 +68,6 @@ bool nvidia_nvml_helper::SafeNVMLInit() {
 #endif
 }
 
-bool nvidia_nvml_helper::SafeNVMLInitFallback() {
-#if USE_DYNAMIC_LIB_LOAD
-	HMODULE hmod = load_module("ProgramFiles", "\\NVIDIA Corporation\\NVSMI\\nvml.dll");
-	if (hmod == NULL) hmod = load_module("windir", "\\System32\\nvml.dll");
-	if (hmod == NULL) return false;
-
-	NVMLInit = (nvml_Init)GetProcAddress(hmod, "nvmlInit_v2");
-	NVMLShutdown = (nvml_Shutdown)GetProcAddress(hmod, "nvmlShutdown");
-	NVMLDeviceGetHandleByPciBusId = (nvml_DeviceGetHandleByPciBusId)GetProcAddress(hmod, "nvmlDeviceGetHandleByPciBusId_v2");
-	NVMLDeviceGetUUID = (nvml_DeviceGetUUID)GetProcAddress(hmod, "nvmlDeviceGetUUID");
-	NVMLDeviceGetPciInfo = (nvml_DeviceGetPciInfo)GetProcAddress(hmod, "nvmlDeviceGetPciInfo_v2");
-	NVMLDeviceGetDisplayActive = (nvml_DeviceGetDisplayActive)GetProcAddress(hmod, "nvmlDeviceGetDisplayActive");
-	NVMLSystemGetDriverVersion = (nvml_SystemGetDriverVersion)GetProcAddress(hmod, "nvmlSystemGetDriverVersion");
-
-	int initStatus = -1;
-	if (NVMLInit) {
-		initStatus = NVMLInit();
-	}
-	return NVML_SUCCESS == initStatus;
-#else
-	NVML_SAFE_CALL(nvmlInit());
-	return true;
-#endif
-}
-
 void nvidia_nvml_helper::SetCudaDeviceAttributes(const char *pciBusID, CudaDevice &cudaDevice) {
 
 	// serial stuff
