@@ -34,35 +34,20 @@ do {														\
 } while (0)
 #endif
 
+HMODULE load_module(const char* env_var_name, const char* sub_path) {
+	char path_buffer[MAX_PATH];
+	DWORD ret = GetEnvironmentVariableA(env_var_name, path_buffer, MAX_PATH);
+	if (ret == 0) return 0;
+	std::string path = std::string(path_buffer) + sub_path;
+	return LoadLibraryA(path.c_str());
+}
+
 bool nvidia_nvml_helper::SafeNVMLInit() {
 #if USE_DYNAMIC_LIB_LOAD
-	char path_buffer[MAX_PATH];
-	DWORD ret = GetEnvironmentVariableA("ProgramFiles", path_buffer, MAX_PATH - 36);
-	if (ret == 0 || ret >= (MAX_PATH - 36))
-	{
-		// error getting program files path
-		return false;
-	}
-
-	std::string standardDriverInstall = std::string(path_buffer) + "\\NVIDIA Corporation\\NVSMI\\nvml.dll";
-	std::cout << "standardDriverInstall path: " << standardDriverInstall << std::endl;
-
-	HMODULE hmod = LoadLibraryA(standardDriverInstall.c_str());
-	if (hmod == NULL) {
-		std::cout << "Start DCH driverInstall fallback lookup" << std::endl;
-		ret = GetEnvironmentVariableA("windir", path_buffer, MAX_PATH - 36);
-		// TODO error getting path
-		// DHC drivers
-		std::string DCH_driverInstall = std::string(path_buffer) + "\\System32\\nvml.dll";
-		std::cout << "DCH_driverInstall path: " << DCH_driverInstall << std::endl;
-
-		hmod = LoadLibraryA(DCH_driverInstall.c_str());
-		if (hmod == NULL) {
-			std::cout << "DCH driverInstall fallback lookup FAILED" << std::endl;
-			return false;
-		}
-		std::cout << "Stop DCH driverInstall fallback lookup" << std::endl;
-	}
+	// check standard driver install and fallback to DCH
+	HMODULE hmod = load_module("ProgramFiles", "\\NVIDIA Corporation\\NVSMI\\nvml.dll");
+	if (hmod == NULL) hmod = load_module("windir", "\\System32\\nvml.dll");
+	if (hmod == NULL) return false;
 
 	NVMLInit = (nvml_Init)GetProcAddress(hmod, "nvmlInit_v2");
 	NVMLShutdown = (nvml_Shutdown)GetProcAddress(hmod, "nvmlShutdown");
@@ -85,33 +70,9 @@ bool nvidia_nvml_helper::SafeNVMLInit() {
 
 bool nvidia_nvml_helper::SafeNVMLInitFallback() {
 #if USE_DYNAMIC_LIB_LOAD
-	char path_buffer[MAX_PATH];
-	DWORD ret = GetCurrentDirectoryA(MAX_PATH, path_buffer);
-	if (ret == 0 || ret >= (MAX_PATH - 36))
-	{
-		// error getting program files path
-		return false;
-	}
-
-	std::string standardDriverInstall = std::string(path_buffer) + "\\NVIDIA Corporation\\NVSMI\\nvml.dll";
-	std::cout << "standardDriverInstall path: " << standardDriverInstall << std::endl;
-
-	HMODULE hmod = LoadLibraryA(standardDriverInstall.c_str());
-	if (hmod == NULL) {
-		std::cout << "Start DCH driverInstall fallback lookup" << std::endl;
-		ret = GetEnvironmentVariableA("windir", path_buffer, MAX_PATH - 36);
-		// TODO error getting path
-		// DHC drivers
-		std::string DCH_driverInstall = std::string(path_buffer) + "\\System32\\nvml.dll";
-		std::cout << "DCH_driverInstall path: " << DCH_driverInstall << std::endl;
-
-		hmod = LoadLibraryA(DCH_driverInstall.c_str());
-		if (hmod == NULL) {
-			std::cout << "DCH driverInstall fallback lookup FAILED" << std::endl;
-			return false;
-		}
-		std::cout << "Stop DCH driverInstall fallback lookup" << std::endl;
-	}
+	HMODULE hmod = load_module("ProgramFiles", "\\NVIDIA Corporation\\NVSMI\\nvml.dll");
+	if (hmod == NULL) hmod = load_module("windir", "\\System32\\nvml.dll");
+	if (hmod == NULL) return false;
 
 	NVMLInit = (nvml_Init)GetProcAddress(hmod, "nvmlInit_v2");
 	NVMLShutdown = (nvml_Shutdown)GetProcAddress(hmod, "nvmlShutdown");
