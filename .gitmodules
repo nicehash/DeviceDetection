@@ -1,0 +1,4 @@
+[submodule "3rdParty/nlohmann"]
+	path = 3rdParty/nlohmann
+	url = git@github.com:nlohmann/json.git
+	branch = master
