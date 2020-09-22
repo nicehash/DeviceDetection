@@ -1,6 +1,8 @@
 #include "nvidia_nvml_helper.h"
 
 #include <windows.h>
+#include <optional>
+#include <string_view>
 
 typedef int(*nvml_Init)(void);
 typedef int(*nvml_Shutdown)(void);
@@ -18,64 +20,63 @@ nvml_DeviceGetPciInfo NVMLDeviceGetPciInfo = 0;
 nvml_DeviceGetDisplayActive NVMLDeviceGetDisplayActive = 0;
 nvml_SystemGetDriverVersion NVMLSystemGetDriverVersion = 0;
 
+using get_path_t = std::optional<std::string>;
 
-
-bool nvidia_nvml_helper::SafeNVMLInit() {
+get_path_t _enviorment_DllPath(LPCSTR lpName, std::string_view dllSubPath) {
 	char path_buffer[MAX_PATH];
-	DWORD ret = GetEnvironmentVariableA("ProgramFiles", path_buffer, MAX_PATH - 36);
-	if (ret == 0 || ret >= (MAX_PATH - 36))
-	{
-		// error getting program files path
-		return false;
-	}
+	auto reservedLength = (dllSubPath.length() + 1);
+	DWORD ret = GetEnvironmentVariableA(lpName, path_buffer, MAX_PATH - reservedLength);
+	
+	// error getting path
+	if (ret == 0 || ret >= (MAX_PATH - reservedLength)) return std::nullopt;
 
-	strcat(path_buffer, "\\NVIDIA Corporation\\NVSMI\\nvml.dll");
-
-	HMODULE hmod = LoadLibraryA(path_buffer);
-	if (hmod == NULL) return false;
-
-	NVMLInit = (nvml_Init)GetProcAddress(hmod, "nvmlInit_v2");
-	NVMLShutdown = (nvml_Shutdown)GetProcAddress(hmod, "nvmlShutdown");
-	NVMLDeviceGetHandleByPciBusId = (nvml_DeviceGetHandleByPciBusId)GetProcAddress(hmod, "nvmlDeviceGetHandleByPciBusId_v2");
-	NVMLDeviceGetUUID = (nvml_DeviceGetUUID)GetProcAddress(hmod, "nvmlDeviceGetUUID");
-	NVMLDeviceGetPciInfo = (nvml_DeviceGetPciInfo)GetProcAddress(hmod, "nvmlDeviceGetPciInfo_v2");
-	NVMLDeviceGetDisplayActive = (nvml_DeviceGetDisplayActive)GetProcAddress(hmod, "nvmlDeviceGetDisplayActive");
-	NVMLSystemGetDriverVersion = (nvml_SystemGetDriverVersion)GetProcAddress(hmod, "nvmlSystemGetDriverVersion");
-
-	int initStatus = -1;
-	if (NVMLInit) {
-		initStatus = NVMLInit();
-	}
-	return NVML_SUCCESS == initStatus;
+	std::string dllPath = std::string(path_buffer);
+	dllPath.append(dllSubPath);
+	return dllPath;
 }
 
-bool nvidia_nvml_helper::SafeNVMLInitFallback() {
-	char path_buffer[MAX_PATH];
-	DWORD ret = GetCurrentDirectoryA(MAX_PATH, path_buffer);
-	if (ret == 0 || ret >= (MAX_PATH - 36))
-	{
-		// error getting program files path
-		return false;
+get_path_t _OldStandard_NVML_DllPath() {
+	return _enviorment_DllPath("ProgramFiles", "\\NVIDIA Corporation\\NVSMI\\nvml.dll");
+}
+
+get_path_t _DCH_NVML_DllPath() {
+	return _enviorment_DllPath("windir", "\\System32\\nvml.dll");
+}
+
+std::tuple<HMODULE, int> LoadNVML() {
+	// 'Old' non DCH drivers
+	if (auto pathOpt = _OldStandard_NVML_DllPath(); pathOpt.has_value()) {
+		HMODULE hmod = LoadLibraryA(pathOpt.value().c_str());
+		if (hmod != NULL) return { hmod, OLD_STANDARD_DRIVERS };
 	}
-
-	strcat(path_buffer, "\\NVIDIA\\nvml.dll");
-
-	HMODULE hmod = LoadLibraryA(path_buffer);
-	if (hmod == NULL) return false;
-
-	NVMLInit = (nvml_Init)GetProcAddress(hmod, "nvmlInit_v2");
-	NVMLShutdown = (nvml_Shutdown)GetProcAddress(hmod, "nvmlShutdown");
-	NVMLDeviceGetHandleByPciBusId = (nvml_DeviceGetHandleByPciBusId)GetProcAddress(hmod, "nvmlDeviceGetHandleByPciBusId_v2");
-	NVMLDeviceGetUUID = (nvml_DeviceGetUUID)GetProcAddress(hmod, "nvmlDeviceGetUUID");
-	NVMLDeviceGetPciInfo = (nvml_DeviceGetPciInfo)GetProcAddress(hmod, "nvmlDeviceGetPciInfo_v2");
-	NVMLDeviceGetDisplayActive = (nvml_DeviceGetDisplayActive)GetProcAddress(hmod, "nvmlDeviceGetDisplayActive");
-	NVMLSystemGetDriverVersion = (nvml_SystemGetDriverVersion)GetProcAddress(hmod, "nvmlSystemGetDriverVersion");
-
-	int initStatus = -1;
-	if (NVMLInit) {
-		initStatus = NVMLInit();
+	// DCH drivers
+	if (auto pathOpt = _DCH_NVML_DllPath(); pathOpt.has_value()) {
+		HMODULE hmod = LoadLibraryA(pathOpt.value().c_str());
+		if (hmod != NULL) return { hmod, DCH_DRIVERS };
 	}
-	return NVML_SUCCESS == initStatus;
+	return { NULL, -1 };
+}
+
+std::tuple<int, int> nvidia_nvml_helper::SafeNVMLInit() {
+	if (auto [hmod, code] = LoadNVML(); hmod != NULL && code != -1) {
+		NVMLInit = (nvml_Init)GetProcAddress(hmod, "nvmlInit_v2");
+		NVMLShutdown = (nvml_Shutdown)GetProcAddress(hmod, "nvmlShutdown");
+		NVMLDeviceGetHandleByPciBusId = (nvml_DeviceGetHandleByPciBusId)GetProcAddress(hmod, "nvmlDeviceGetHandleByPciBusId_v2");
+		NVMLDeviceGetUUID = (nvml_DeviceGetUUID)GetProcAddress(hmod, "nvmlDeviceGetUUID");
+		NVMLDeviceGetPciInfo = (nvml_DeviceGetPciInfo)GetProcAddress(hmod, "nvmlDeviceGetPciInfo_v2");
+		NVMLDeviceGetDisplayActive = (nvml_DeviceGetDisplayActive)GetProcAddress(hmod, "nvmlDeviceGetDisplayActive");
+		NVMLSystemGetDriverVersion = (nvml_SystemGetDriverVersion)GetProcAddress(hmod, "nvmlSystemGetDriverVersion");
+
+		if (NVMLInit == NULL) {
+			return { -2, code };
+		}
+		int initStatus = NVMLInit();
+		// first 0 is OK
+		return { initStatus, code }; 
+	}
+	else {
+		return { -1, code };
+	}
 }
 
 void nvidia_nvml_helper::SetCudaDeviceAttributes(const char *pciBusID, CudaDevice &cudaDevice) {
@@ -155,3 +156,4 @@ std::string nvidia_nvml_helper::getVendorString(nvmlPciInfo_t &nvmlPciInfo) {
 	}
 	return "UNKNOWN";
 }
+

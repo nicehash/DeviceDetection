@@ -1,29 +1,22 @@
 #include "cuda_dev_detection.h"
 #include "CudaDetection.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
-char* _GetCUDADevices(bool prettyString, bool useNvmlFallback)
+
+const char* _GetCUDADevices(bool prettyString)
 {
     static std::string ret;
     CudaDetection detection;
-    if (detection.QueryDevices(useNvmlFallback)) {
+    if (detection.QueryDevices()) {
         ret = detection.GetDevicesJsonString(prettyString);
     }
     else {
         ret = detection.GetErrorString();
     }
-    return (char*)ret.c_str();
+    return ret.c_str();
 }
 
-#ifdef __cplusplus
-}
-#endif
 
-
-#ifdef _WIN32
 BOOL WINAPI DllMain(
         HINSTANCE hinstDLL,  // handle to DLL module
         DWORD fdwReason,     // reason for calling function
@@ -51,4 +44,3 @@ BOOL WINAPI DllMain(
         }
         return TRUE;  // Successful DLL_PROCESS_ATTACH.
     }
-#endif

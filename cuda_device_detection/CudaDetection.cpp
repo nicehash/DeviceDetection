@@ -14,14 +14,15 @@ CudaDetection::~CudaDetection() { }
 
 #define PCI_BUS_LEN 64
 
-bool CudaDetection::QueryDevices(bool useNvmlFallback) {
+bool CudaDetection::QueryDevices() {
 	try {
 		int device_count;
 		CUDA_SAFE_CALL(cudaGetDeviceCount(&device_count));
-		_isNvmlInitialized = nvidia_nvml_helper::SafeNVMLInit();
-		if (!_isNvmlInitialized && useNvmlFallback) {
-			_isNvmlInitializedFallback = nvidia_nvml_helper::SafeNVMLInitFallback();
-		}
+		
+		const auto [initSuccess, dllCode] = nvidia_nvml_helper::SafeNVMLInit();
+		_isNvmlInitialized = initSuccess == 0 && dllCode == OLD_STANDARD_DRIVERS;
+		_isNvmlInitializedFallback = initSuccess == 0 && dllCode == DCH_DRIVERS;
+
 		for (int i = 0; i < device_count; ++i) {
 			CudaDevice cudaDevice;
 

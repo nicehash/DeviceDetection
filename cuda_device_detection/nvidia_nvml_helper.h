@@ -3,17 +3,20 @@
 #include <map>
 #include <string>
 #include <cstdint>
+#include <tuple>
 
 #include <nvml.h>
 #include "CudaDevice.h"
+
+#define OLD_STANDARD_DRIVERS 1
+#define DCH_DRIVERS 2
 
 class nvidia_nvml_helper
 {
 private:
 	nvidia_nvml_helper(); // no instances
 public:
-	static bool SafeNVMLInit();
-	static bool SafeNVMLInitFallback();
+	static std::tuple<int, int> SafeNVMLInit();
 	// set UUID, VendorID and VendorName
 	static void SetCudaDeviceAttributes(const char *pciBusID, CudaDevice &cudaDevice);
 	static void SafeNVMLShutdown();
