@@ -7,12 +7,6 @@
 #include <nvml.h>
 #include "CudaDevice.h"
 
-#ifdef WIN32
-#define USE_DYNAMIC_LIB_LOAD 1
-#else
-#define USE_DYNAMIC_LIB_LOAD 0
-#endif
-
 class nvidia_nvml_helper
 {
 private:

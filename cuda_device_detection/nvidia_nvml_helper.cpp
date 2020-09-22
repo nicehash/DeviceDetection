@@ -1,6 +1,5 @@
 #include "nvidia_nvml_helper.h"
 
-#if USE_DYNAMIC_LIB_LOAD
 #include <windows.h>
 
 typedef int(*nvml_Init)(void);
@@ -19,22 +18,9 @@ nvml_DeviceGetPciInfo NVMLDeviceGetPciInfo = 0;
 nvml_DeviceGetDisplayActive NVMLDeviceGetDisplayActive = 0;
 nvml_SystemGetDriverVersion NVMLSystemGetDriverVersion = 0;
 
-#else
-#define NVML_SAFE_CALL(call)								\
-do {														\
-	nvmlReturn_t err = call;								\
-	if (NVML_SUCCESS != err) {								\
-		const char * errorString = nvmlErrorString(err);	\
-		fprintf(stderr,										\
-			"NVML error in func '%s' at line %i : %s.\n",	\
-			__FUNCTION__, __LINE__, errorString);			\
-		throw std::runtime_error(errorString);				\
-							}										\
-} while (0)
-#endif
+
 
 bool nvidia_nvml_helper::SafeNVMLInit() {
-#if USE_DYNAMIC_LIB_LOAD
 	char path_buffer[MAX_PATH];
 	DWORD ret = GetEnvironmentVariableA("ProgramFiles", path_buffer, MAX_PATH - 36);
 	if (ret == 0 || ret >= (MAX_PATH - 36))
@@ -61,14 +47,9 @@ bool nvidia_nvml_helper::SafeNVMLInit() {
 		initStatus = NVMLInit();
 	}
 	return NVML_SUCCESS == initStatus;
-#else
-	NVML_SAFE_CALL(nvmlInit());
-	return true;
-#endif
 }
 
 bool nvidia_nvml_helper::SafeNVMLInitFallback() {
-#if USE_DYNAMIC_LIB_LOAD
 	char path_buffer[MAX_PATH];
 	DWORD ret = GetCurrentDirectoryA(MAX_PATH, path_buffer);
 	if (ret == 0 || ret >= (MAX_PATH - 36))
@@ -95,10 +76,6 @@ bool nvidia_nvml_helper::SafeNVMLInitFallback() {
 		initStatus = NVMLInit();
 	}
 	return NVML_SUCCESS == initStatus;
-#else
-	NVML_SAFE_CALL(nvmlInit());
-	return true;
-#endif
 }
 
 void nvidia_nvml_helper::SetCudaDeviceAttributes(const char *pciBusID, CudaDevice &cudaDevice) {
@@ -109,7 +86,6 @@ void nvidia_nvml_helper::SetCudaDeviceAttributes(const char *pciBusID, CudaDevic
 	char uuid[NVML_DEVICE_UUID_BUFFER_SIZE];
 	nvmlEnableState_t isEnabled = NVML_FEATURE_DISABLED;
 
-#if USE_DYNAMIC_LIB_LOAD
 	if (NVMLDeviceGetHandleByPciBusId && NVMLDeviceGetHandleByPciBusId(pciBusID, &device_t) == 0) {
 		// init uuid
 		if (NVMLDeviceGetUUID && NVMLDeviceGetUUID(device_t, uuid, NVML_DEVICE_UUID_BUFFER_SIZE) == 0) {
@@ -127,45 +103,20 @@ void nvidia_nvml_helper::SetCudaDeviceAttributes(const char *pciBusID, CudaDevic
 			cudaDevice.HasMonitorConnected = isEnabled;
 		}
 	}
-#else
-	// init uuid
-	NVML_SAFE_CALL(nvmlDeviceGetHandleByPciBusId(pciBusID, &device_t)); // use pciBusID to get the right version
-	NVML_SAFE_CALL(nvmlDeviceGetUUID(device_t, uuid, NVML_DEVICE_UUID_BUFFER_SIZE));
-	cudaDevice.UUID = uuid;
-
-	NVML_SAFE_CALL(nvmlDeviceGetPciInfo(device_t, &pciInfo));
-	// init device info
-	cudaDevice.VendorName = getVendorString(pciInfo);
-	cudaDevice.pciDeviceId = pciInfo.pciDeviceId;
-	cudaDevice.pciSubSystemId = pciInfo.pciSubSystemId;
-	cudaDevice.VendorID = getVendorId(pciInfo);
-	NVML_SAFE_CALL(nvmlDeviceGetDisplayActive(device_t, &isEnabled));
-	cudaDevice.HasMonitorConnected = isEnabled;
-#endif
 }
 
 std::string nvidia_nvml_helper::GetDriverVersionSafe() {
-	char buffer[NVML_SYSTEM_DRIVER_VERSION_BUFFER_SIZE];
-#if USE_DYNAMIC_LIB_LOAD
-	if (NVMLSystemGetDriverVersion) {
-		NVMLSystemGetDriverVersion(buffer, NVML_SYSTEM_DRIVER_VERSION_BUFFER_SIZE);
+	std::string buffer;
+	buffer.resize(NVML_SYSTEM_DRIVER_VERSION_BUFFER_SIZE);
+	if (NVMLSystemGetDriverVersion && NVML_SUCCESS == NVMLSystemGetDriverVersion(buffer.data(), NVML_SYSTEM_DRIVER_VERSION_BUFFER_SIZE)) {
+		return buffer;
 	}
-	else {
-		return "";
-	}
-#else
-	NVML_SAFE_CALL(nvmlSystemGetDriverVersion(buffer, sizeof(buffer)));
-#endif
-	return std::string(buffer);
+	return "";
 }
 
 
 void nvidia_nvml_helper::SafeNVMLShutdown() {
-#if USE_DYNAMIC_LIB_LOAD
 	if (NVMLShutdown) NVMLShutdown();
-#else
-	NVML_SAFE_CALL(nvmlShutdown());
-#endif
 }
 
 
