@@ -30,7 +30,6 @@ struct cuda_nvml_device {
 
 struct detection_result {
 	int NvmlLoaded = {};
-	bool NvmlLoadedFallback = {}; // where is this being used?
 	int NvmlInitialized = {}; // new
 	std::string DriverVersion = {};
 	std::vector<cuda_nvml_device> CudaDevices = {};
@@ -66,7 +65,6 @@ void to_json(nlohmann::json& j, const detection_result& d) {
 	j =
 	{
 		{ "NvmlLoaded", d.NvmlLoaded },
-		{ "NvmlLoadedFallback", d.NvmlLoadedFallback },
 		{ "NvmlInitialized", d.NvmlInitialized},
 		{ "DriverVersion", d.DriverVersion },
 		{ "CudaDevices", d.CudaDevices },
@@ -269,7 +267,6 @@ std::tuple<bool, std::string> cuda_nvml_detection::get_devices_json_result(bool 
 
 		const auto [init_code, nvml_load_code] = nvidia_nvml_helper::SafeNVMLInit();
 		result.NvmlLoaded = nvml_load_code;
-		result.NvmlLoadedFallback = nvml_load_code == NVML_DCH_LOADED;
 		result.NvmlInitialized = init_code;
 
 		for (int i = 0; i < device_count; ++i) {
