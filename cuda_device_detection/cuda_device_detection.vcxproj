@@ -11,19 +11,11 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="CudaDetection.cpp" />
-    <ClCompile Include="cuda_dev_detection.cpp" />
-    <ClCompile Include="json_helpers.cpp" />
+    <ClCompile Include="cuda_device_detection.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="nvidia_nvml_helper.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="CudaDetection.h" />
-    <ClInclude Include="CudaDevice.h" />
-    <ClInclude Include="cuda_dev_detection.h" />
-    <ClInclude Include="cuda_helper.h" />
-    <ClInclude Include="json_helpers.h" />
-    <ClInclude Include="nvidia_nvml_helper.h" />
+    <ClInclude Include="cuda_device_detection.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{C10779CB-6AE5-4AA4-8986-97B3599790F7}</ProjectGuid>
