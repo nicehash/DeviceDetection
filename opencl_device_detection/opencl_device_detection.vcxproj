@@ -101,16 +101,11 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="json_helpers.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="AMDOpenCLDeviceDetection.cpp" />
-    <ClCompile Include="ocl_dev_detection.cpp" />
+    <ClCompile Include="opencl_device_detection.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="json_helpers.h" />
-    <ClInclude Include="ocl_dev_detection.h" />
-    <ClInclude Include="OpenCLDevice.h" />
-    <ClInclude Include="AMDOpenCLDeviceDetection.h" />
+    <ClInclude Include="opencl_device_detection.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
