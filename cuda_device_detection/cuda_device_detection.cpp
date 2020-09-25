@@ -175,6 +175,11 @@ namespace nvidia_nvml_helper  {
 			{ 0x1B4C, "KFA2" },
 			{ 0x3842, "EVGA" },
 			{ 0x7377, "Colorful" },
+			{ 0x1569, "Palit" },
+			{ 0x1849, "ASRock" },
+			{ 0x1043, "ASUSTeK" },
+			{ 0x148C, "PowerColor" },
+			{ 0x1DA2, "Sapphire" },
 			{ 0, "" }
 		};
 		uint16_t vendorId = 0;
