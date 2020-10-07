@@ -304,6 +304,11 @@ extern "C"
 		else
 			return 1;
 	}
+
+	__declspec(dllexport) const char* __cdecl cpu_detection_json_result_str(bool pretty_print = false) {
+		if (pretty_print) return "TODO-CPU2!!!";
+		return "TODO-CPU!!!";
+	}
 }
 
 

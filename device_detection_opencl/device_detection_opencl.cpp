@@ -1,4 +1,4 @@
-#include "opencl_device_detection.h"
+#include "device_detection_opencl.h"
 
 #include <windows.h>
 #include <vector>

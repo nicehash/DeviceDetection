@@ -1,4 +1,4 @@
-#include "cuda_device_detection.h"
+#include "device_detection_cuda_nvml.h"
 
 #include <windows.h>
 #include <iostream>
@@ -84,9 +84,6 @@ do {														\
 	cudaError_t err = call;									\
 	if (cudaSuccess != err) {								\
 		const char * errorString = cudaGetErrorString(err);	\
-		fprintf(stderr,										\
-			"CUDA error in func '%s' at line %i : %s.\n",	\
-			__FUNCTION__, __LINE__, errorString);			\
 		throw std::runtime_error(errorString);				\
 				}											\
 } while (0)
@@ -262,7 +259,7 @@ namespace nvidia_nvml_helper  {
 #pragma endregion NVML
 
 
-std::tuple<bool, std::string> cuda_nvml_detection::get_devices_json_result(bool prettyPrint) {
+std::tuple<bool, std::string> cuda_nvml_detection::get_devices_json_result(bool pretty_print) {
 	bool ok = true;
 	detection_result result;
 	
@@ -307,22 +304,18 @@ std::tuple<bool, std::string> cuda_nvml_detection::get_devices_json_result(bool 
 
 	nlohmann::json j;
 	to_json(j, result);
-	auto json_str = prettyPrint ? j.dump(4) : j.dump();
+	auto json_str = pretty_print ? j.dump(4) : j.dump();
 	return { ok, json_str };
 }
 
 
 
-const char* cuda_device_detection_json_result_str(bool prettyString)
+const char* cuda_device_detection_json_result_str(bool pretty_print)
 {
 	static std::string ret;
-	const auto [ok, json_str] = cuda_nvml_detection::get_devices_json_result(prettyString);
+	const auto [ok, json_str] = cuda_nvml_detection::get_devices_json_result(pretty_print);
 	ret = json_str;
 	return ret.c_str();
-}
-
-char* _GetCUDADevices(bool prettyString) {
-	return (char*)cuda_device_detection_json_result_str(prettyString);
 }
 
 
