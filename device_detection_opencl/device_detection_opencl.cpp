@@ -1,4 +1,4 @@
-#include "opencl_device_detection.h"
+#include "device_detection_opencl.h"
 
 #include <windows.h>
 #include <vector>
@@ -452,16 +452,16 @@ namespace opencl_device_detection {
 #pragma endregion OpenCL
 
 
-const char* open_cl_device_detection_json_result_str(bool prettyString)
+const char* open_cl_device_detection_json_result_str(bool pretty_print)
 {
+	static bool called = false;
 	static std::string ret;
-	const auto [ok, json_str] = opencl_device_detection::get_devices_json_result(prettyString);
-	ret = json_str;
+	if (!called) {
+		called = true;
+		const auto [ok, json_str] = opencl_device_detection::get_devices_json_result(pretty_print);
+		ret = json_str;
+	}
 	return ret.c_str();
-}
-
-char* _GetOpenCLDevices(bool prettyJSONString) {
-	return (char*)open_cl_device_detection_json_result_str(prettyJSONString);
 }
 
 BOOL WINAPI DllMain(

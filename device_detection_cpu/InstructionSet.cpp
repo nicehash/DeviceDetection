@@ -80,6 +80,10 @@ public:
 	static bool _3DNOWEXT(void) { return CPU_Rep.isAMD_ && CPU_Rep.f_81_EDX_[30]; }
 	static bool _3DNOW(void) { return CPU_Rep.isAMD_ && CPU_Rep.f_81_EDX_[31]; }
 
+
+	static bool IS_AMD(void) { return CPU_Rep.isAMD_; }
+	static bool IS_INTEL(void) { return CPU_Rep.isIntel_; }
+
 private:
 	static const InstructionSet_Internal CPU_Rep;
 
@@ -261,48 +265,140 @@ const InstructionSet::InstructionSet_Internal InstructionSet::CPU_Rep;
 	support_message("XSAVE", InstructionSet::XSAVE());
 }*/
 
+int32_t get_masked(int32_t val, int32_t h, int32_t l)
+{
+	val &= (0x7FFFFFFF >> (31 - (h - l))) << l;
+	return val >> l;
+}
+
+void cpuid(uint32_t eax, int32_t ecx, int32_t val[4])
+{
+	memset(val, 0, sizeof(int32_t) * 4);
+
+#ifdef _WIN32
+	__cpuidex(val, eax, ecx);
+#else
+	__cpuid_count(eax, ecx, val[0], val[1], val[2], val[3]);
+#endif
+}
+
+uint32_t getFamily()
+{
+	int32_t cpu_info[4];
+	char cpustr[13] = { 0 };
+
+	cpuid(0, 0, cpu_info);
+	std::memcpy(cpustr, &cpu_info[1], 4);
+	std::memcpy(cpustr + 4, &cpu_info[3], 4);
+	std::memcpy(cpustr + 8, &cpu_info[2], 4);
+	cpuid(1, 0, cpu_info);
+
+	uint32_t family = get_masked(cpu_info[0], 12, 8);
+	uint32_t model = get_masked(cpu_info[0], 8, 4) | get_masked(cpu_info[0], 20, 16) << 4;
+	std::string type_name = cpustr;
+
+	if (strcmp(cpustr, "AuthenticAMD") == 0 && family == 0xF)
+	{
+		family += get_masked(cpu_info[0], 28, 20);
+	}
+
+	return family;
+}
+
+std::tuple<int32_t, bool> detectL3SizeAndZen()
+{
+	uint32_t family = 0u;
+	int32_t L3KB_size = 0;
+	bool isZen = false;
+	int32_t cpu_info[4];
+	char cpustr[13] = { 0 };
+
+	cpuid(0, 0, cpu_info);
+	memcpy(cpustr, &cpu_info[1], 4);
+	memcpy(cpustr + 4, &cpu_info[3], 4);
+	memcpy(cpustr + 8, &cpu_info[2], 4);
+
+	if (strcmp(cpustr, "GenuineIntel") == 0)
+	{
+		cpuid(4, 3, cpu_info);
+
+		if (get_masked(cpu_info[0], 7, 5) != 3)
+		{
+			//printer::inst()->print_msg(L0, "Autoconf failed: Couldn't find L3 cache page.");
+			std::cout << "Autoconf failed: Couldn't find L3 cache page." << std::endl;
+			return { L3KB_size, isZen };
+		}
+
+		L3KB_size = ((get_masked(cpu_info[1], 31, 22) + 1) * (get_masked(cpu_info[1], 21, 12) + 1) *
+			(get_masked(cpu_info[1], 11, 0) + 1) * (cpu_info[2] + 1)) /
+			1024;
+
+		return { L3KB_size, isZen };
+	}
+	else if (strcmp(cpustr, "AuthenticAMD") == 0)
+	{
+		cpuid(0x80000006, 0, cpu_info);
+
+		L3KB_size = get_masked(cpu_info[3], 31, 18) * 512;
+
+		cpuid(1, 0, cpu_info);
+
+		family = getFamily();
+		isZen = !(family < 0x17); //0x17h is Zen
+		return { L3KB_size, isZen };
+	}
+	else
+	{
+		//printer::inst()->print_msg(L0, "Autoconf failed: Unknown CPU type: %s.", cpustr);
+		std::cout << "Autoconf failed: Unknown CPU type: " << cpustr << std::endl;
+		return { L3KB_size, isZen };
+	}
+}
+
+int PhysicalProcessorCount()
+{
+	ULONG p;
+	if (GetNumaHighestNodeNumber(&p))
+		return (int)p + 1;
+	else
+		return 1;
+}
+
+#include "json.hpp"
+std::tuple<bool, std::string> get_cpu_json_result(bool prettyPrint) {
+	bool ok = true;
+	const auto [l3kb, isZen] = detectL3SizeAndZen();
+	const auto cpu_name = InstructionSet::Brand();
+	const auto is_amd_threadripper = cpu_name.find("Threadripper") != std::string::npos;
+	const auto cpu_count = is_amd_threadripper ? 1 : PhysicalProcessorCount();
+	nlohmann::json j = {
+		{"PhysicalProcessorCount", cpu_count},
+		{"Name", cpu_name},
+		{"Vendor", InstructionSet::Vendor()},
+		{"SupportsSSE2", InstructionSet::SSE2() == 1},
+		{"SupportsAVX", InstructionSet::AVX() == 1},
+		{"SupportsAVX2", InstructionSet::AVX2() == 1},
+		{"SupportsAES_SSE42", (InstructionSet::AES() && InstructionSet::SSE42())},
+		{"L3KB_size", l3kb},
+		{"IsZen", isZen},
+		{"AMD", InstructionSet::IS_AMD()},
+		{"Intel", InstructionSet::IS_INTEL()},
+	};
+	auto json_str = prettyPrint ? j.dump(4) : j.dump();
+	return { ok, json_str };
+}
 
 extern "C"
 {
-	__declspec(dllexport) char* __cdecl _GetCPUName()
-	{
-		static std::string brand = InstructionSet::Brand();
-		return (char*)brand.c_str();
-	}
-
-	__declspec(dllexport) char* __cdecl _GetCPUVendor()
-	{
-		static std::string vendor = InstructionSet::Vendor();
-		return (char*)vendor.c_str();
-	}
-
-	__declspec(dllexport) int __cdecl SupportsSSE2()
-	{
-		return InstructionSet::SSE2();
-	}
-
-	__declspec(dllexport) int __cdecl SupportsAVX()
-	{
-		return InstructionSet::AVX();
-	}
-
-	__declspec(dllexport) int __cdecl SupportsAVX2()
-	{
-		return InstructionSet::AVX2();
-	}
-
-	__declspec(dllexport) int __cdecl SupportsAES()
-	{
-		return (int)(InstructionSet::AES() && InstructionSet::SSE42());
-	}
-
-	__declspec(dllexport) int __cdecl GetPhysicalProcessorCount()
-	{
-		ULONG p;
-		if (GetNumaHighestNodeNumber(&p))
-			return (int)p + 1;
-		else
-			return 1;
+	__declspec(dllexport) const char* __cdecl cpu_detection_json_result_str(bool pretty_print = false) {
+		static bool called = false;
+		static std::string ret;
+		if (!called) {
+			called = true;
+			const auto [ok, json_str] = get_cpu_json_result(pretty_print);
+			ret = json_str;
+		}
+		return ret.c_str();
 	}
 }
 

@@ -291,5 +291,6 @@ shared/json.hpp
 *.db
 *.opendb
 .vscode
-# 3rdPartyLibs
+!3rdPartyLibs/OpenCL/*
 !3rdParty/lightOCLSDK/*
+device_detection_x64

@@ -3,11 +3,13 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
 VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "opencl_device_detection", "opencl_device_detection\opencl_device_detection.vcxproj", "{F4D88D6A-2321-4431-AFD1-8B6A1760358B}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "device_detection", "device_detection\device_detection.vcxproj", "{95AB6F55-0C84-4391-835F-D78AB504FF21}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cuda_device_detection", "cuda_device_detection\cuda_device_detection.vcxproj", "{C10779CB-6AE5-4AA4-8986-97B3599790F7}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "device_detection_cpu", "device_detection_cpu\device_detection_cpu.vcxproj", "{23C94F99-F466-4CBE-90B7-71B450DD7BF1}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cpuid", "cpuid\cpuid.vcxproj", "{23C94F99-F466-4CBE-90B7-71B450DD7BF1}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "device_detection_cuda_nvml", "device_detection_cuda_nvml\device_detection_cuda_nvml.vcxproj", "{C10779CB-6AE5-4AA4-8986-97B3599790F7}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "device_detection_opencl", "device_detection_opencl\device_detection_opencl.vcxproj", "{F4D88D6A-2321-4431-AFD1-8B6A1760358B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -27,6 +29,10 @@ Global
 		{23C94F99-F466-4CBE-90B7-71B450DD7BF1}.Debug|x64.Build.0 = Debug|x64
 		{23C94F99-F466-4CBE-90B7-71B450DD7BF1}.Release|x64.ActiveCfg = Release|x64
 		{23C94F99-F466-4CBE-90B7-71B450DD7BF1}.Release|x64.Build.0 = Release|x64
+		{95AB6F55-0C84-4391-835F-D78AB504FF21}.Debug|x64.ActiveCfg = Debug|x64
+		{95AB6F55-0C84-4391-835F-D78AB504FF21}.Debug|x64.Build.0 = Debug|x64
+		{95AB6F55-0C84-4391-835F-D78AB504FF21}.Release|x64.ActiveCfg = Release|x64
+		{95AB6F55-0C84-4391-835F-D78AB504FF21}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
