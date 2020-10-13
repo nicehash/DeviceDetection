@@ -312,9 +312,13 @@ std::tuple<bool, std::string> cuda_nvml_detection::get_devices_json_result(bool 
 
 const char* cuda_device_detection_json_result_str(bool pretty_print)
 {
+	static bool called = false;
 	static std::string ret;
-	const auto [ok, json_str] = cuda_nvml_detection::get_devices_json_result(pretty_print);
-	ret = json_str;
+	if (!called) {
+		called = true;
+		const auto [ok, json_str] = cuda_nvml_detection::get_devices_json_result(pretty_print);
+		ret = json_str;
+	}
 	return ret.c_str();
 }
 
