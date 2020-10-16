@@ -317,15 +317,12 @@ std::tuple<int32_t, bool> detectL3SizeAndZen()
 	memcpy(cpustr, &cpu_info[1], 4);
 	memcpy(cpustr + 4, &cpu_info[3], 4);
 	memcpy(cpustr + 8, &cpu_info[2], 4);
-
 	if (strcmp(cpustr, "GenuineIntel") == 0)
 	{
 		cpuid(4, 3, cpu_info);
 
 		if (get_masked(cpu_info[0], 7, 5) != 3)
 		{
-			//printer::inst()->print_msg(L0, "Autoconf failed: Couldn't find L3 cache page.");
-			std::cout << "Autoconf failed: Couldn't find L3 cache page." << std::endl;
 			return { L3KB_size, isZen };
 		}
 
@@ -349,8 +346,6 @@ std::tuple<int32_t, bool> detectL3SizeAndZen()
 	}
 	else
 	{
-		//printer::inst()->print_msg(L0, "Autoconf failed: Unknown CPU type: %s.", cpustr);
-		std::cout << "Autoconf failed: Unknown CPU type: " << cpustr << std::endl;
 		return { L3KB_size, isZen };
 	}
 }
