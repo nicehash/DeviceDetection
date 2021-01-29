@@ -103,6 +103,7 @@ do {														\
 namespace nvidia_nvml_helper  {
 	
 	typedef int(*nvml_Init)(void);
+	typedef int(*nvml_InitWithFlags)(unsigned int  flags);
 	typedef int(*nvml_Shutdown)(void);
 	typedef int(*nvml_DeviceGetHandleByPciBusId)(const char*, nvmlDevice_t*);
 	typedef int(*nvml_DeviceGetUUID)(nvmlDevice_t, char*, unsigned int);
@@ -111,6 +112,7 @@ namespace nvidia_nvml_helper  {
 	typedef nvmlReturn_t(*nvml_SystemGetDriverVersion)(char*, unsigned);
 
 	nvml_Init NVMLInit = 0;
+	nvml_InitWithFlags NVMLInitWithFlags = 0;
 	nvml_Shutdown NVMLShutdown = 0;
 	nvml_DeviceGetHandleByPciBusId NVMLDeviceGetHandleByPciBusId = 0;
 	nvml_DeviceGetUUID NVMLDeviceGetUUID = 0;
@@ -195,6 +197,7 @@ namespace nvidia_nvml_helper  {
 	std::tuple<int, int> SafeNVMLInit() {
 		if (auto [hmod, code] = _load_NVML(); hmod != NULL && code != NVML_NOT_LOADED) {
 			NVMLInit = (nvml_Init)GetProcAddress(hmod, "nvmlInit_v2");
+			NVMLInitWithFlags = (nvml_InitWithFlags)GetProcAddress(hmod, "nvmlInitWithFlags");
 			NVMLShutdown = (nvml_Shutdown)GetProcAddress(hmod, "nvmlShutdown");
 			NVMLDeviceGetHandleByPciBusId = (nvml_DeviceGetHandleByPciBusId)GetProcAddress(hmod, "nvmlDeviceGetHandleByPciBusId_v2");
 			NVMLDeviceGetUUID = (nvml_DeviceGetUUID)GetProcAddress(hmod, "nvmlDeviceGetUUID");
@@ -205,9 +208,15 @@ namespace nvidia_nvml_helper  {
 			if (NVMLInit == NULL) {
 				return { -2, code };
 			}
-			int initStatus = NVMLInit();
+			if (NVMLInitWithFlags == NULL) {
+				return { -3, code };
+			}
+			//int initStatus = NVMLInit();
 			// first 0 is OK
-			return { initStatus, code };
+			//return { initStatus, code };
+			// first 0 is OK
+			int initStatus2 = NVMLInitWithFlags(0);
+			return { initStatus2, code };
 		}
 		else {
 			return { -1, code };
