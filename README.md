@@ -1,5 +1,9 @@
 # DeviceDetection
 Small project for identifying CPU(s) features and OpenCL (AMD) and CUDA (NVIDIA) GPUs.
 
-## TODO 
-  - Fork https://github.com/GPUOpen-LibrariesAndSDKs/OCL-SDK/ extract release and add as submodule
+## Get started
+``` 
+git clone git@github.com:nicehash/DeviceDetection.git
+cd DeviceDetection
+git submodule update --init --recursive
+```
