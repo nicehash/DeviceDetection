@@ -293,4 +293,5 @@ shared/json.hpp
 .vscode
 !3rdPartyLibs/OpenCL/*
 !3rdParty/lightOCLSDK/*
+!3rdParty/lightOCLSDK/**
 device_detection_x64
