@@ -10,6 +10,28 @@
 #include <string_view>
 #include <cstdint>
 
+#include <fstream>
+#include <sstream>
+
+#include <stdio.h>  /* defines FILENAME_MAX */
+#define WINDOWS  /* uncomment this line to use it for windows.*/ 
+#ifdef WINDOWS
+#include <direct.h>
+#define GetCurrentDir _getcwd
+#else
+#include <unistd.h>
+#define GetCurrentDir getcwd
+#endif
+
+std::string GetCurrentWorkingDir(void) {
+	char buff[FILENAME_MAX];
+	GetCurrentDir(buff, FILENAME_MAX);
+	std::string current_working_dir(buff);
+	return current_working_dir;
+}
+//
+
+
 #pragma region HELPER structs
 
 struct cuda_nvml_device {
@@ -100,8 +122,8 @@ do {														\
 #define NVML_DCH_LOADED 1
 
 
-namespace nvidia_nvml_helper  {
-	
+namespace nvidia_nvml_helper {
+
 	typedef int(*nvml_Init)(void);
 	typedef int(*nvml_InitWithFlags)(unsigned int  flags);
 	typedef int(*nvml_Shutdown)(void);
@@ -119,6 +141,8 @@ namespace nvidia_nvml_helper  {
 	nvml_DeviceGetPciInfo NVMLDeviceGetPciInfo = 0;
 	nvml_DeviceGetDisplayActive NVMLDeviceGetDisplayActive = 0;
 	nvml_SystemGetDriverVersion NVMLSystemGetDriverVersion = 0;
+
+	std::map<std::uint16_t, std::string> VendorList;
 
 	using get_path_t = std::optional<std::string>;
 
@@ -157,8 +181,47 @@ namespace nvidia_nvml_helper  {
 		return { NULL, NVML_NOT_LOADED };
 	}
 
-	std::tuple<uint16_t, std::string> _get_vendor_id_and_name(nvmlPciInfo_t& nvmlPciInfo) {
-		static const std::map<std::uint16_t, std::string> VENDOR_NAMES = {
+	std::tuple<uint16_t, std::string> splitBy(std::string const& str, const char delim)
+	{
+		std::tuple<uint16_t, std::string> out{
+			-1, ""
+		};
+		uint16_t vendorID(0);
+		size_t start;
+		size_t end = 0;
+		std::vector<std::string> parsedVendor;
+		std::string name = "";
+		int index = 0;
+		try {
+			while ((start = str.find_first_not_of(delim, end)) != std::string::npos)
+			{
+				end = str.find(delim, start);
+				if (index == 0) parsedVendor.push_back(str.substr(start, end - start));
+				else name += str.substr(start, end - start) + " ";
+				index++;
+			}
+		}
+		catch (std::exception e) {
+			//std::cout << "Error while reading vendor item!" << std::endl;
+			//std::cout << e.what() << std::endl;
+		}
+		parsedVendor.push_back(name);
+		if (parsedVendor.size() != 2) return out;
+		try {
+			uint16_t num = std::stoul(parsedVendor[0], nullptr, 16);
+			out = {
+				num, parsedVendor[1]
+			};
+		}
+		catch (std::exception e) {
+			std::cout << e.what() << std::endl;
+		}
+
+		return out;
+	}
+
+	void InitVendorNames() {
+		std::map<std::uint16_t, std::string> ShortVendorList = {
 			{ 0x1043, "ASUS" },
 			{ 0x107D, "Leadtek" },
 			{ 0x10B0, "Gainward" },
@@ -181,12 +244,39 @@ namespace nvidia_nvml_helper  {
 			{ 0x1DA2, "Sapphire" },
 			{ 0, "" }
 		};
+		std::cout << GetCurrentWorkingDir() << std::endl;
+		std::ifstream infile("vendor_ids");
+		if (infile.is_open()) {
+			std::string line;
+			while (std::getline(infile, line))
+			{
+				std::istringstream iss(line);
+				auto [Id, name] = splitBy(line, ' ');
+				if (Id == -1) continue;
+				else {
+					VendorList.emplace(Id, name);
+				}
+			}
+			infile.close();
+			VendorList.emplace(0, "");
+			//changing common vendor names to shorter version
+			for (const auto [compareId, name] : ShortVendorList) {
+				VendorList[compareId] = name;
+			}
+		}
+		else {
+			//std::cout << "Vendor list not found, fallback to common vendors" << std::endl;
+			VendorList = ShortVendorList;
+		}
+	}
+
+	std::tuple<uint16_t, std::string> _get_vendor_id_and_name(nvmlPciInfo_t& nvmlPciInfo) {
 		uint16_t vendorId = 0;
 		vendorId = nvmlPciInfo.pciDeviceId & 0xFFFF;
 		if (vendorId == 0x10DE && nvmlPciInfo.pciSubSystemId) {
 			vendorId = nvmlPciInfo.pciSubSystemId & 0xFFFF;
 		}
-		for (const auto [compareId, name] : VENDOR_NAMES) {
+		for (const auto [compareId, name] : VendorList) {
 			if (compareId == vendorId) {
 				return { vendorId , name };
 			}
@@ -204,6 +294,10 @@ namespace nvidia_nvml_helper  {
 			NVMLDeviceGetPciInfo = (nvml_DeviceGetPciInfo)GetProcAddress(hmod, "nvmlDeviceGetPciInfo_v2");
 			NVMLDeviceGetDisplayActive = (nvml_DeviceGetDisplayActive)GetProcAddress(hmod, "nvmlDeviceGetDisplayActive");
 			NVMLSystemGetDriverVersion = (nvml_SystemGetDriverVersion)GetProcAddress(hmod, "nvmlSystemGetDriverVersion");
+
+			InitVendorNames();
+
+			//VendorList = new std::vector<std::tuple<uint16_t, std::string>>();
 
 			if (NVMLInit == NULL) {
 				return { -2, code };
@@ -271,7 +365,7 @@ namespace nvidia_nvml_helper  {
 std::tuple<bool, std::string> cuda_nvml_detection::get_devices_json_result(bool pretty_print) {
 	bool ok = true;
 	detection_result result;
-	
+
 	try {
 		int device_count;
 		CUDA_SAFE_CALL(cudaGetDeviceCount(&device_count));
