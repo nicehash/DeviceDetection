@@ -1,4 +1,4 @@
-#include "device_detection_opencl.h"
+#include "device_detection_opencl_adl.h"
 
 #include <windows.h>
 #include <vector>
@@ -31,11 +31,18 @@ struct OpenCLPlatform {
 	std::vector<OpenCLDevice> Devices = {};
 };
 
+struct ADLBusIDVersionPair {
+	int BUS_ID = -1;
+	std::string version = "";
+};
+
 struct detection_result {
 	std::string Status = "OK";
 	std::string ErrorString = "";
 	std::vector<OpenCLPlatform> Platforms;
+	std::vector<ADLBusIDVersionPair> BusIDVersionPairs;
 };
+
 
 #pragma endregion HELPER structs
 
@@ -68,14 +75,23 @@ void to_json(nlohmann::json& j, const OpenCLPlatform& p) {
 	};
 }
 
+void to_json(nlohmann::json& j, const ADLBusIDVersionPair& a) {
+	j = {
+		{ "BUS_ID", a.BUS_ID },
+		{ "AdrenalinVersion", a.version}
+	};
+}
+
 void to_json(nlohmann::json& j, const detection_result& d) {
 	j =
 	{
 		{ "Status", d.Status },
 		{ "Platforms", d.Platforms },
-		{ "ErrorString", d.ErrorString }
+		{ "ErrorString", d.ErrorString },
+		{ "AMDBusIDVersionPairs", d.BusIDVersionPairs }
 	};
 }
+
 
 #pragma endregion nlohmann::json
 
@@ -94,7 +110,7 @@ void to_json(nlohmann::json& j, const detection_result& d) {
 #define CL_DEVICE_PCI_SLOT_ID_NV                    0x4009
 #endif
 
-namespace opencl_device_detection {
+namespace opencl_adl_device_detection {
 	namespace open_cl_helpers {
 		//C implementation
 		/////////////////////////////////////////////////////////////////
@@ -285,12 +301,234 @@ namespace opencl_device_detection {
 
 	} // namespace open_cl_helpers
 
+} // namespace opencl_device_detection
+
+#pragma endregion OpenCL
+
+#pragma region ADL
+namespace adl_device_detection {
+	bool initialized = false;
+	int  iNumberAdapters;
+
+	typedef struct ADLVersionsInfoX2
+	{
+		/// Driver Release (Packaging) Version (e.g. "16.20.1035-160621a-303814C")
+		char strDriverVer[256];
+		/// Catalyst Version(e.g. "15.8").
+		char strCatalystVersion[256];
+		/// Crimson Version(e.g. "16.6.2").
+		char strCrimsonVersion[256];
+		/// Web link to an XML file with information about the latest AMD drivers and locations (e.g. "http://support.amd.com/drivers/xml/driver_09_us.xml" )
+		char strCatalystWebLink[256];
+
+	} ADLVersionsInfoX2, * LPADLVersionsInfoX2;
+
+	typedef int(*ADL2_GRAPHICS_VERSIONSX3_GET)  (ADL_CONTEXT_HANDLE, int, ADLVersionsInfoX2*);
+	typedef int(*ADL_MAIN_CONTROL_CREATE)(ADL_MAIN_MALLOC_CALLBACK, int);
+	typedef int(*ADL_MAIN_CONTROL_DESTROY)();
+	typedef int(*ADL_ADAPTER_ADAPTERINFO_GET) (LPAdapterInfo, int);
+	typedef int(*ADL_ADAPTER_NUMBEROFADAPTERS_GET) (int*);
+
+
+	HINSTANCE hDLL;
+	LPAdapterInfo lpAdapterInfo = NULL;
+	ADL_CONTEXT_HANDLE context = NULL;//todo set??
+
+
+	ADL2_GRAPHICS_VERSIONSX3_GET ADL2_Graphics_VersionsX3_Get = NULL;
+	ADL_MAIN_CONTROL_CREATE ADL_Main_Control_Create = NULL;
+	ADL_MAIN_CONTROL_DESTROY ADL_Main_Control_Destroy = NULL;
+	ADL_ADAPTER_ADAPTERINFO_GET ADL_Adapter_AdapterInfo_Get = NULL;
+	ADL_ADAPTER_NUMBEROFADAPTERS_GET ADL_Adapter_NumberOfAdapters_Get = NULL;
+
+
+
+	// Memory allocation function
+	void* __stdcall ADL_Main_Memory_Alloc(int iSize)
+	{
+		void* lpBuffer = malloc(iSize);
+		return lpBuffer;
+	}
+
+	// Optional Memory de-allocation function
+	void __stdcall ADL_Main_Memory_Free(void** lpBuffer)
+	{
+		if (NULL != *lpBuffer)
+		{
+			free(*lpBuffer);
+			*lpBuffer = NULL;
+		}
+	}
+
+	int initializeADL()
+	{
+		char path_buffer[MAX_PATH];
+		DWORD ret = GetEnvironmentVariableA("windir", path_buffer, MAX_PATH - 36);
+		std::string adlxxInstall = std::string(path_buffer) + "\\System32\\atiadlxx.dll";
+		hDLL = LoadLibraryA(adlxxInstall.c_str());
+		if (hDLL == NULL)
+		{
+			// A 32 bit calling application on 64 bit OS will fail to LoadLibrary.
+			// Try to load the 32 bit library (atiadlxy.dll) instead
+			std::string adlxyInstall = std::string(path_buffer) + "\\System32\\atiadlxy.dll";
+			hDLL = LoadLibraryA(adlxyInstall.c_str());
+		}
+
+		if (NULL == hDLL)
+		{
+			//nhm_amd_log("Failed to load ADL library");
+			return FALSE;
+		}
+		ADL_Main_Control_Create = (ADL_MAIN_CONTROL_CREATE)GetProcAddress(hDLL, "ADL_Main_Control_Create");
+		ADL_Main_Control_Destroy = (ADL_MAIN_CONTROL_DESTROY)GetProcAddress(hDLL, "ADL_Main_Control_Destroy");
+		ADL_Adapter_NumberOfAdapters_Get = (ADL_ADAPTER_NUMBEROFADAPTERS_GET)GetProcAddress(hDLL, "ADL_Adapter_NumberOfAdapters_Get");
+		ADL_Adapter_AdapterInfo_Get = (ADL_ADAPTER_ADAPTERINFO_GET)GetProcAddress(hDLL, "ADL_Adapter_AdapterInfo_Get");
+		ADL2_Graphics_VersionsX3_Get = (ADL2_GRAPHICS_VERSIONSX3_GET)GetProcAddress(hDLL, "ADL2_Graphics_VersionsX3_Get");
+
+		if (NULL == ADL_Main_Control_Create ||
+			NULL == ADL_Main_Control_Destroy ||
+			NULL == ADL2_Graphics_VersionsX3_Get ||
+			NULL == ADL_Adapter_AdapterInfo_Get ||
+			NULL == ADL_Adapter_NumberOfAdapters_Get
+			)
+		{
+			//nhm_amd_log("Failed to get ADL function pointers");
+			return FALSE;
+		}
+
+		if (ADL_OK != ADL_Main_Control_Create(ADL_Main_Memory_Alloc, 1))
+		{
+			printf("Failed to initialize nested ADL2 context");
+			return ADL_ERR;
+		}
+		return TRUE;
+	}
+
+	void deinitializeADL()
+	{
+		ADL_Main_Control_Destroy();
+		FreeLibrary(hDLL);
+	}
+
+	int init() {
+		if (initialized) return 1;
+		if (initializeADL())
+		{
+			initialized = true;
+			// Obtain the number of adapters for the system
+			if (int adl_ret = ADL_Adapter_NumberOfAdapters_Get(&iNumberAdapters); ADL_OK != adl_ret) {
+				//nhm_amd_log("nhm_amd_init Error ADL_Adapter_NumberOfAdapters_Get: Code %d", adl_ret);
+				return -1;
+			}
+
+			if (0 < iNumberAdapters) {
+				lpAdapterInfo = (LPAdapterInfo)malloc(sizeof(AdapterInfo) * iNumberAdapters);
+				if (lpAdapterInfo == nullptr) return -4;
+				memset(lpAdapterInfo, 0, sizeof(AdapterInfo) * iNumberAdapters);
+
+				// Get the AdapterInfo structure for all adapters in the system
+				if (int adl_ret = ADL_Adapter_AdapterInfo_Get(lpAdapterInfo, sizeof(AdapterInfo) * iNumberAdapters); ADL_OK != adl_ret) {
+					//nhm_amd_log("nhm_amd_init Error ADL_Adapter_AdapterInfo_Get: Code %d", adl_ret);
+					return -2;
+				}
+			}
+			return 0;
+		}
+		return -3;
+	}
+
+	int deinit() {
+		if (initialized) {
+			initialized = false;
+			ADL_Main_Memory_Free((void**)&lpAdapterInfo);
+			deinitializeADL();
+			return 0;
+		}
+		return -1;
+	}
+
+	int has_adapter(const int bus_number) {
+		for (int i = 0; i < iNumberAdapters; i++) {
+			if (lpAdapterInfo[i].iBusNumber == bus_number) return 0;
+		}
+		return -1;
+	}
+
+
+	int get_driver_version(const int bus_number, ADLVersionsInfoX2* driverVersion) {
+		if (ADL2_Graphics_VersionsX3_Get == NULL) return -1;
+
+		bool bus_id_found = false;
+		bool version_found = false;
+		int ret = 0;
+
+		for (int i = 0; i < iNumberAdapters; i++) {
+			if (lpAdapterInfo[i].iBusNumber != bus_number) continue;
+			//DEBUG_LOG(1, "[adapterIndex, bus_number]=[%d, %d]", i, bus_number);
+			bus_id_found = true;
+
+			//ADLVersionsInfoX2 driverVersion = { {0}, {0}, {0}, {0} };
+			ret = ADL2_Graphics_VersionsX3_Get(context, lpAdapterInfo[i].iAdapterIndex, driverVersion);
+			//DEBUG_LOG(1, "ADL2_Graphics_VersionsX3_Get: Code %d", ret);
+			//DEBUG_LOG(2, *driverVersion);
+			if (ADL_OK != ret) {
+				//nhm_amd_log("Error ADL2_Graphics_VersionsX3_Get: Code %d", ret);
+				break;
+			}
+			version_found = true;
+			return 0;
+		}
+		if (!bus_id_found) return -1;
+		if (!version_found) return -1;
+		return ret;
+	}
+
+	bool vectorContainsBusNumber(std::vector<ADLBusIDVersionPair> v, int bus) {
+		for (int i = 0; i < v.size(); i++) {
+			if (v[i].BUS_ID == bus) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	std::vector<ADLBusIDVersionPair> get_amd_device_driver_versions() {
+		std::vector<ADLBusIDVersionPair> versionList;
+		bool globalOk = true;
+		init();
+		for (int i = 0; i < iNumberAdapters; i++) {
+			try {
+				ADLVersionsInfoX2 temp;
+				if (vectorContainsBusNumber(versionList, lpAdapterInfo[i].iBusNumber)) continue;
+
+				int ok = get_driver_version(lpAdapterInfo[i].iBusNumber, &temp);
+				std::string versionStr = std::string(temp.strCrimsonVersion);
+				ADLBusIDVersionPair tempPair;
+				tempPair.BUS_ID = lpAdapterInfo[i].iBusNumber;
+				tempPair.version = versionStr;
+				if (ok == 0 && versionStr != "") {
+					versionList.push_back(tempPair);
+				}
+			}
+			catch (std::exception ex) {
+				globalOk = false;
+			}
+		}
+		deinit();
+		return versionList;
+	}
+}
+
+#pragma endregion ADL
+
+#pragma region GlobalFunction
+namespace GlobalFunction {
 	std::tuple<bool, std::string> get_devices_json_result(bool prettyPrint) {
 		bool ok = true;
 		detection_result result;
 		auto AppendToErrorString = [&result](cl_int clStatus) {
 			result.ErrorString += "_err_";
-			result.ErrorString += open_cl_helpers::cl_err_to_str(clStatus);
+			result.ErrorString += opencl_adl_device_detection::open_cl_helpers::cl_err_to_str(clStatus);
 		};
 		try {
 			// get platforms
@@ -301,7 +539,7 @@ namespace opencl_device_detection {
 			clStatus = clGetPlatformIDs(0, NULL, &numPlatforms);
 			if (clStatus != CL_SUCCESS)
 			{
-				throw std::runtime_error(std::string(open_cl_helpers::cl_err_to_str(clStatus)) + " when calling clGetPlatformIDs for number of platforms.");
+				throw std::runtime_error(std::string(opencl_adl_device_detection::open_cl_helpers::cl_err_to_str(clStatus)) + " when calling clGetPlatformIDs for number of platforms.");
 			}
 			if (numPlatforms == 0)
 			{
@@ -313,14 +551,14 @@ namespace opencl_device_detection {
 			clStatus = clGetPlatformIDs(numPlatforms, platforms.data(), NULL);
 
 			if (clStatus != CL_SUCCESS) {
-				throw std::runtime_error(std::string(open_cl_helpers::cl_err_to_str(clStatus)) + " when calling clGetPlatformIDs for platform information.");
+				throw std::runtime_error(std::string(opencl_adl_device_detection::open_cl_helpers::cl_err_to_str(clStatus)) + " when calling clGetPlatformIDs for platform information.");
 			}
 
 			// iterate platforms
 			for (unsigned int i = 0; i < numPlatforms; i++)
 			{
-				std::string platformName = open_cl_helpers::getClGetDeviceInfoString(platforms[i], CL_PLATFORM_VENDOR);
-				std::string platformName2 = open_cl_helpers::getClGetDeviceInfoString(platforms[i], CL_PLATFORM_NAME);
+				std::string platformName = opencl_adl_device_detection::open_cl_helpers::getClGetDeviceInfoString(platforms[i], CL_PLATFORM_VENDOR);
+				std::string platformName2 = opencl_adl_device_detection::open_cl_helpers::getClGetDeviceInfoString(platforms[i], CL_PLATFORM_NAME);
 
 				bool isAMDOpenCL = platformName.find("Advanced Micro Devices") != std::string::npos ||
 					platformName.find("Apple") != std::string::npos ||
@@ -351,19 +589,19 @@ namespace opencl_device_detection {
 					curDevice.DeviceID = (int)k;
 
 					// CL_DEVICE_NAME
-					curDevice._CL_DEVICE_NAME = open_cl_helpers::getClGetDeviceInfoString(device_list[k], CL_DEVICE_NAME);
+					curDevice._CL_DEVICE_NAME = opencl_adl_device_detection::open_cl_helpers::getClGetDeviceInfoString(device_list[k], CL_DEVICE_NAME);
 
 					// CL_DEVICE_VENDOR
-					std::string vendor = open_cl_helpers::getClGetDeviceInfoString(device_list[k], CL_DEVICE_VENDOR);
+					std::string vendor = opencl_adl_device_detection::open_cl_helpers::getClGetDeviceInfoString(device_list[k], CL_DEVICE_VENDOR);
 					bool isAMDDevice = vendor.find("Advanced Micro Devices") != std::string::npos || vendor.find("AMD") != std::string::npos;
 					bool isNVIDIADevice = vendor.find("NVIDIA Corporation") != std::string::npos || vendor.find("NVIDIA") != std::string::npos;
 					curDevice._CL_DEVICE_VENDOR = vendor;
 
 					// CL_DEVICE_VERSION
-					curDevice._CL_DEVICE_VERSION = open_cl_helpers::getClGetDeviceInfoString(device_list[k], CL_DEVICE_VERSION);
+					curDevice._CL_DEVICE_VERSION = opencl_adl_device_detection::open_cl_helpers::getClGetDeviceInfoString(device_list[k], CL_DEVICE_VERSION);
 
 					// CL_DRIVER_VERSION
-					curDevice._CL_DRIVER_VERSION = open_cl_helpers::getClGetDeviceInfoString(device_list[k], CL_DRIVER_VERSION);
+					curDevice._CL_DRIVER_VERSION = opencl_adl_device_detection::open_cl_helpers::getClGetDeviceInfoString(device_list[k], CL_DRIVER_VERSION);
 
 					// CL_DEVICE_TYPE
 					cl_device_type type;
@@ -411,7 +649,7 @@ namespace opencl_device_detection {
 						}
 
 						// CL_DEVICE_BOARD_NAME_AMD
-						curDevice._CL_DEVICE_BOARD_NAME_AMD = open_cl_helpers::getClGetDeviceInfoString(device_list[k], CL_DEVICE_BOARD_NAME_AMD);
+						curDevice._CL_DEVICE_BOARD_NAME_AMD = opencl_adl_device_detection::open_cl_helpers::getClGetDeviceInfoString(device_list[k], CL_DEVICE_BOARD_NAME_AMD);
 					}
 					// NVIDIA extensions
 					if (isNVIDIADevice) {
@@ -435,59 +673,62 @@ namespace opencl_device_detection {
 				}
 				result.Platforms.push_back(current);
 			}
+			auto deviceVersionList = adl_device_detection::get_amd_device_driver_versions();
+			result.BusIDVersionPairs = deviceVersionList;
 		}
 		catch (std::exception& ex) {
 			result.Status = "Error " + std::string(ex.what());
 			ok = false;
 		}
-
 		nlohmann::json j;
 		to_json(j, result);
 		auto json_str = prettyPrint ? j.dump(4) : j.dump();
 		return { ok, json_str };
 	}
 
-} // namespace opencl_device_detection
+}
+#pragma endregion GlobalFunction
 
-#pragma endregion OpenCL
 
 
-const char* open_cl_device_detection_json_result_str(bool pretty_print)
+
+const char* open_cl_adl_device_detection_json_result_str(bool pretty_print)
 {
 	static bool called = false;
 	static std::string ret;
 	if (!called) {
 		called = true;
-		const auto [ok, json_str] = opencl_device_detection::get_devices_json_result(pretty_print);
+		const auto [ok, json_str] = GlobalFunction::get_devices_json_result(pretty_print);
+		//const auto [ok2, deviceVersionList] = adl_device_detection::get_amd_device_driver_versions(pretty_print);
 		ret = json_str;
 	}
 	return ret.c_str();
 }
 
 BOOL WINAPI DllMain(
-    HINSTANCE hinstDLL,  // handle to DLL module
-    DWORD fdwReason,     // reason for calling function
-    LPVOID lpReserved)  // reserved
+	HINSTANCE hinstDLL,  // handle to DLL module
+	DWORD fdwReason,     // reason for calling function
+	LPVOID lpReserved)  // reserved
 {
-    // Perform actions based on the reason for calling.
-    switch (fdwReason)
-    {
-    case DLL_PROCESS_ATTACH:
-        // Initialize once for each new process.
-        // Return FALSE to fail DLL load.
-        break;
+	// Perform actions based on the reason for calling.
+	switch (fdwReason)
+	{
+	case DLL_PROCESS_ATTACH:
+		// Initialize once for each new process.
+		// Return FALSE to fail DLL load.
+		break;
 
-    case DLL_THREAD_ATTACH:
-        // Do thread-specific initialization.
-        break;
+	case DLL_THREAD_ATTACH:
+		// Do thread-specific initialization.
+		break;
 
-    case DLL_THREAD_DETACH:
-        // Do thread-specific cleanup.
-        break;
+	case DLL_THREAD_DETACH:
+		// Do thread-specific cleanup.
+		break;
 
-    case DLL_PROCESS_DETACH:
-        // Perform any necessary cleanup.
-        break;
-    }
-    return TRUE;  // Successful DLL_PROCESS_ATTACH.
+	case DLL_PROCESS_DETACH:
+		// Perform any necessary cleanup.
+		break;
+	}
+	return TRUE;  // Successful DLL_PROCESS_ATTACH.
 }
