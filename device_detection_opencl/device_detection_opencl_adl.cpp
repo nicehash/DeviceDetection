@@ -332,7 +332,7 @@ namespace adl_device_detection {
 
 	HINSTANCE hDLL;
 	LPAdapterInfo lpAdapterInfo = NULL;
-	ADL_CONTEXT_HANDLE context = NULL;//todo set??
+	ADL_CONTEXT_HANDLE context = NULL;
 
 
 	ADL2_GRAPHICS_VERSIONSX3_GET ADL2_Graphics_VersionsX3_Get = NULL;
@@ -518,7 +518,6 @@ namespace adl_device_detection {
 		return versionList;
 	}
 }
-
 #pragma endregion ADL
 
 #pragma region GlobalFunction
