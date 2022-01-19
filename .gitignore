@@ -297,3 +297,4 @@ shared/json.hpp
 device_detection_x64
 
 3rdParty/nlohmann/*
+3rdParty/AMD_ADL/*

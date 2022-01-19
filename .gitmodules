@@ -2,3 +2,6 @@
 	path = 3rdParty/nlohmann
 	url = git@github.com:nlohmann/json.git
 	branch = master
+[submodule "3rdParty/AMD_ADL"]
+	path = 3rdParty/AMD_ADL
+	url = git@github.com:GPUOpen-LibrariesAndSDKs/display-library.git

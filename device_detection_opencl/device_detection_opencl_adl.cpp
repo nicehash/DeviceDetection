@@ -8,7 +8,7 @@
 #include <utility>
 #include <ctype.h>
 #include <vector>
-#include "include/adl_sdk.h"
+#include "adl_sdk.h"
 
 #pragma region HELPER structs
 
