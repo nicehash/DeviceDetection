@@ -65,8 +65,7 @@
       <AdditionalDependencies>kernel32.lib;cudart_static.lib;cuda.lib;nvml.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>
-      </Command>
+      <Command>if NOT exist "$(SolutionDir)$(Platform)\$(Configuration)\vendor_ids" copy /Y "$(SolutionDir)extras\vendor_parser\vendor_ids" "$(SolutionDir)$(Platform)\$(Configuration)\vendor_ids"</Command>
     </PostBuildEvent>
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
@@ -91,8 +90,7 @@
       <AdditionalDependencies>kernel32.lib;cudart_static.lib;cuda.lib;nvml.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>
-      </Command>
+      <Command>if NOT exist "$(SolutionDir)$(Platform)\$(Configuration)\vendor_ids" copy /Y "$(SolutionDir)extras\vendor_parser\vendor_ids" "$(SolutionDir)$(Platform)\$(Configuration)\vendor_ids"</Command>
     </PostBuildEvent>
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
