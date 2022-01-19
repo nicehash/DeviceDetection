@@ -7,6 +7,8 @@
 #include <stdexcept>
 #include <utility>
 #include <ctype.h>
+#include <vector>
+#include "include/adl_sdk.h"
 
 #pragma region HELPER structs
 
@@ -520,8 +522,8 @@ namespace adl_device_detection {
 }
 #pragma endregion ADL
 
-#pragma region GlobalFunction
-namespace GlobalFunction {
+#pragma region opencl_adl_device_detection
+namespace opencl_adl_device_detection {
 	std::tuple<bool, std::string> get_devices_json_result(bool prettyPrint) {
 		bool ok = true;
 		detection_result result;
@@ -686,7 +688,7 @@ namespace GlobalFunction {
 	}
 
 }
-#pragma endregion GlobalFunction
+#pragma endregion opencl_adl_device_detection
 
 
 
@@ -697,8 +699,7 @@ const char* open_cl_adl_device_detection_json_result_str(bool pretty_print)
 	static std::string ret;
 	if (!called) {
 		called = true;
-		const auto [ok, json_str] = GlobalFunction::get_devices_json_result(pretty_print);
-		//const auto [ok2, deviceVersionList] = adl_device_detection::get_amd_device_driver_versions(pretty_print);
+		const auto [ok, json_str] = opencl_adl_device_detection::get_devices_json_result(pretty_print);
 		ret = json_str;
 	}
 	return ret.c_str();
