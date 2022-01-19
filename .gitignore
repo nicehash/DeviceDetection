@@ -295,3 +295,6 @@ shared/json.hpp
 !3rdParty/lightOCLSDK/*
 !3rdParty/lightOCLSDK/**
 device_detection_x64
+
+3rdParty/nlohmann/*
+3rdParty/AMD_ADL/*

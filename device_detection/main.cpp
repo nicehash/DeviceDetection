@@ -102,12 +102,12 @@ public:
 	std::string detect(bool pretty_print) {
 		if (!try_load) {
 			try_load = true;
-			dll = LoadLibraryA("device_detection_opencl.dll");
-			if (dll == NULL) return "Cannot load 'device_detection_opencl.dll'";
-			open_cl_device_detection_json_result_str = (open_cl_device_detection_json_result_str_t)GetProcAddress(dll, "open_cl_device_detection_json_result_str");
+			dll = LoadLibraryA("device_detection_opencl_adl.dll");
+			if (dll == NULL) return "Cannot load 'device_detection_opencl_adl.dll'";
+			open_cl_device_detection_json_result_str = (open_cl_device_detection_json_result_str_t)GetProcAddress(dll, "open_cl_adl_device_detection_json_result_str");
 		}
 		if (try_load && open_cl_device_detection_json_result_str != nullptr) return open_cl_device_detection_json_result_str(pretty_print);
-		return "Loaded library 'device_detection_opencl.dll' missing 'open_cl_device_detection_json_result_str'";
+		return "Loaded library 'device_detection_opencl_adl.dll' missing 'open_cl_device_detection_json_result_str'";
 	}
 };
 std::string detect_opencl(bool pretty_print) {
